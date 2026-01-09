@@ -1,0 +1,467 @@
+{% extends "base.html" %}
+
+{% block title %}Registrar Compra{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3">
+                <i class="fas fa-file-invoice-dollar"></i> Registrar Nueva Compra
+            </h1>
+            <p class="text-muted">Registra una compra sin pagar. Pagarás posteriormente desde Pendientes de Pago.</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <form method="POST" id="formRegistrarCompra">
+                <!-- DATOS GENERALES -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="fas fa-info-circle"></i> Datos de la Compra</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="proveedor_buscar" class="form-label required">Proveedor (buscar por nombre o RUC)</label>
+                                <input type="text" class="form-control" id="proveedor_buscar" placeholder="Escribe nombre o RUC..." autocomplete="off">
+                                <input type="hidden" id="proveedor_id" name="proveedor_id" required>
+                                <div id="proveedor_sugerencias" class="list-group mt-1" style="max-height: 200px; overflow-y: auto;"></div>
+                                <small id="proveedor_seleccionado" class="text-muted d-block mt-1"></small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="tipo" class="form-label required">Tipo de Compra</label>
+                                <select class="form-select" id="tipo" name="tipo" required onchange="cambiarTipoCompra()">
+                                    <option value="">-- Selecciona Tipo --</option>
+                                    <option value="producto">Producto (actualiza stock)</option>
+                                    <option value="servicio">Servicio</option>
+                                    <option value="factura">Factura</option>
+                                    <option value="gasto">Gasto</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <label for="descripcion" class="form-label">Descripción/Concepto</label>
+                                <textarea class="form-control" id="descripcion" name="descripcion" rows="2"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label for="numero_factura" class="form-label">Nro. factura proveedor (opcional)</label>
+                                <input type="text" class="form-control" id="numero_factura" name="numero_factura" placeholder="Ej: 001-001-0001234">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="fecha_factura" class="form-label">Fecha factura (opcional)</label>
+                                <input type="date" class="form-control" id="fecha_factura" name="fecha_factura">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DETALLES DE COMPRA -->
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="fas fa-list"></i> Detalles de la Compra</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="tablaDetalles">
+                                <thead class="table-light">
+                                    <tr id="encabezadoProducto" class="d-none">
+                                        <th style="width: 40%">Producto</th>
+                                        <th style="width: 15%">Cantidad</th>
+                                        <th style="width: 20%">Precio Unit.</th>
+                                        <th style="width: 15%">Subtotal</th>
+                                        <th style="width: 10%" class="text-center">Acción</th>
+                                    </tr>
+                                    <tr id="encabezadoOtro" class="d-none">
+                                        <th style="width: 50%">Concepto</th>
+                                        <th style="width: 20%">Monto</th>
+                                        <th style="width: 20%">-</th>
+                                        <th style="width: 10%" class="text-center">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="detallesCompra">
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-3">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="btnAgregarDetalle">
+                                <i class="fas fa-plus"></i> Agregar Línea
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TOTALES -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 offset-md-6">
+                                <table class="table table-sm">
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>Subtotal:</strong></td>
+                                            <td class="text-right"><span id="totalSubtotal">0.00</span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>IVA (10%):</strong></td>
+                                            <td class="text-right"><span id="totalIVA">0.00</span></td>
+                                        </tr>
+                                        <tr class="table-active">
+                                            <td><strong>TOTAL:</strong></td>
+                                            <td class="text-right"><strong><span id="totalGeneral">0.00</span></strong></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BOTONES DE ACCIÓN -->
+                <div class="d-flex justify-content-between">
+                    <a href="{{ url_for('compras.listar') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-save"></i> Registrar Compra
+                    </button>
+                </div>
+
+                <!-- Campo oculto para detalles JSON -->
+                <input type="hidden" id="detalles_json" name="detalles_json" value="[]">
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para seleccionar producto -->
+<div class="modal fade" id="modalSeleccionarProducto" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Seleccionar Producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" class="form-control" id="buscarProducto" placeholder="Buscar producto...">
+                </div>
+                <div id="listaProductos" style="max-height: 400px; overflow-y: auto;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.required::after {
+    content: "*";
+    color: red;
+    margin-left: 4px;
+}
+
+.text-right {
+    text-align: right;
+}
+</style>
+
+<script>
+let detalles = [];
+let contadorLineas = 0;
+let productos = [];
+let proveedorSeleccionado = null;
+
+// Cargar productos al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    cargarProductos();
+    document.getElementById('btnAgregarDetalle').addEventListener('click', agregarDetalle);
+    document.getElementById('formRegistrarCompra').addEventListener('submit', guardarCompra);
+    // Autocomplete proveedor
+    const inputProv = document.getElementById('proveedor_buscar');
+    inputProv.addEventListener('input', debounce(buscarProveedores, 250));
+    inputProv.addEventListener('focus', () => { if (inputProv.value) buscarProveedores(); });
+});
+
+// Cambiar encabezados según tipo de compra
+function cambiarTipoCompra() {
+    const tipo = document.getElementById('tipo').value;
+    document.getElementById('encabezadoProducto').classList.toggle('d-none', tipo !== 'producto');
+    document.getElementById('encabezadoOtro').classList.toggle('d-none', tipo === 'producto');
+    // Requerir datos de factura solo cuando tipo es factura
+    const nroFac = document.getElementById('numero_factura');
+    const fechaFac = document.getElementById('fecha_factura');
+    if (nroFac && fechaFac) {
+        const esFactura = tipo === 'factura';
+        nroFac.required = esFactura;
+        fechaFac.required = esFactura;
+    }
+    document.getElementById('detallesCompra').innerHTML = '';
+    detalles = [];
+    contadorLineas = 0;
+    actualizarTotales();
+}
+
+function agregarDetalle() {
+    const tipo = document.getElementById('tipo').value;
+    
+    if (!tipo) {
+        alert('Selecciona un tipo de compra');
+        return;
+    }
+
+    contadorLineas++;
+    const id = contadorLineas;
+
+    let html;
+    if (tipo === 'producto') {
+        html = `
+            <tr id="detalle_${id}">
+                <td>
+                    <input type="hidden" class="producto-id" value="">
+                    <input type="text" class="form-control form-control-sm producto-buscar" placeholder="Buscar por código o nombre..." autocomplete="off">
+                    <div class="list-group mt-1" id="sugerencias_${id}" style="max-height: 180px; overflow-y:auto;"></div>
+                </td>
+                <td><input type="number" class="form-control form-control-sm cantidad" value="1" min="0.01" step="0.01" onchange="calcularSubtotal(${id})"></td>
+                <td><input type="number" class="form-control form-control-sm precio" value="0" min="0" step="0.01" onchange="calcularSubtotal(${id})"></td>
+                <td><span class="subtotal">0.00</span></td>
+                <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarDetalle(${id})"><i class="fas fa-trash"></i></button></td>
+            </tr>
+        `;
+        // Attach autocomplete handlers for this row
+        setTimeout(() => initProductoAutocomplete(id), 0);
+    } else {
+        html = `
+            <tr id="detalle_${id}">
+                <td><input type="text" class="form-control form-control-sm concepto" placeholder="Concepto/Descripción"></td>
+                <td><input type="number" class="form-control form-control-sm precio" value="0" min="0" step="0.01" onchange="calcularSubtotal(${id})" oninput="formatPrecioEnVivo(${id})"></td>
+                <td></td>
+                <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarDetalle(${id})"><i class="fas fa-trash"></i></button></td>
+            </tr>
+        `;
+    }
+
+    document.getElementById('detallesCompra').innerHTML += html;
+}
+
+function initProductoAutocomplete(id) {
+    const input = document.querySelector(`#detalle_${id} .producto-buscar`);
+    const sug = document.getElementById(`sugerencias_${id}`);
+    const handler = debounce(() => {
+        const term = input.value.trim();
+        sug.innerHTML = '';
+        if (!term || term.length < 2) return;
+        // Use productos buscar endpoint for live results
+        fetch(`{{ url_for('productos.buscar') }}?term=${encodeURIComponent(term)}`)
+            .then(r => r.json())
+            .then(items => {
+                if (!Array.isArray(items) || items.length === 0) return;
+                items.forEach(p => {
+                    const a = document.createElement('a');
+                    a.href = '#';
+                    a.className = 'list-group-item list-group-item-action';
+                    a.innerHTML = `<strong>${p.codigo}</strong> - ${p.value}<br><small>Stock: ${p.stock_actual} | Compra: ${p.precio_compra}</small>`;
+                    a.addEventListener('click', (ev) => {
+                        ev.preventDefault();
+                        seleccionarProducto(id, {
+                            id: p.id, codigo: p.codigo, nombre: p.value,
+                            precio_compra: p.precio_compra, stock_actual: p.stock_actual
+                        });
+                        sug.innerHTML = '';
+                    });
+                    sug.appendChild(a);
+                });
+            })
+            .catch(e => console.error('Error buscando productos:', e));
+    }, 250);
+    input.addEventListener('input', handler);
+}
+
+function seleccionarProducto(id, producto) {
+    const row = document.getElementById(`detalle_${id}`);
+    row.querySelector('.producto-id').value = producto.id;
+    row.querySelector('.producto-buscar').value = `${producto.codigo} - ${producto.nombre}`;
+    row.querySelector('.precio').value = producto.precio_compra || 0;
+    calcularSubtotal(id);
+    
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalSeleccionarProducto'));
+    if (modal) modal.hide();
+}
+
+function eliminarDetalle(id) {
+    document.getElementById(`detalle_${id}`).remove();
+    actualizarTotales();
+}
+
+function calcularSubtotal(id) {
+    const row = document.getElementById(`detalle_${id}`);
+    const cantidad = parseFloat(row.querySelector('.cantidad')?.value || 0);
+    const precio = parseFloat(row.querySelector('.precio').value || 0);
+    const subtotal = cantidad * precio;
+    
+    if (row.querySelector('.subtotal')) {
+        row.querySelector('.subtotal').textContent = formatoNumero(subtotal);
+    }
+    
+    actualizarTotales();
+}
+
+function actualizarTotales() {
+    const tipo = document.getElementById('tipo').value;
+    let subtotalSinIva = 0;
+    let totalIva = 0;
+    let totalBruto = 0;
+
+    document.querySelectorAll('#detallesCompra tr').forEach((row, idx) => {
+        const cantidad = parseFloat(row.querySelector('.cantidad')?.value || 1);  // Para servicios: cantidad = 1
+        const precio = parseFloat(row.querySelector('.precio').value || 0);
+        const concepto = row.querySelector('.concepto')?.value || '';
+        const productoId = row.querySelector('.producto-id')?.value || null;
+
+        if (precio > 0) {  // Solo validar precio, no cantidad para servicios
+            const totalLinea = cantidad * precio; // precio incluye IVA
+            const baseSinIva = totalLinea / 1.10;
+            const ivaLinea = totalLinea - baseSinIva;
+            subtotalSinIva += baseSinIva;
+            totalIva += ivaLinea;
+            totalBruto += totalLinea;
+        }
+
+        detalles[idx] = {
+            producto_id: productoId,
+            cantidad: cantidad,
+            precio_unitario: precio,
+            concepto: concepto,
+            subtotal: cantidad * precio
+        };
+    });
+
+    document.getElementById('totalSubtotal').textContent = formatoNumero(subtotalSinIva);
+    document.getElementById('totalIVA').textContent = formatoNumero(totalIva);
+    document.getElementById('totalGeneral').textContent = formatoNumero(totalBruto);
+}
+
+function cargarProductos() {
+    fetch('{{ url_for("productos.api_productos") }}')
+        .then(r => r.json())
+        .then(data => {
+            productos = data;
+        })
+        .catch(e => console.error('Error cargando productos:', e));
+}
+
+function guardarCompra(e) {
+    e.preventDefault();
+
+    const tipo = document.getElementById('tipo').value;
+    const proveedor = document.getElementById('proveedor_id').value;
+
+    if (!tipo || !proveedor) {
+        alert('Completa los campos requeridos');
+        return;
+    }
+
+    // Validar detalles
+    const filasDetalles = document.querySelectorAll('#detallesCompra tr').length;
+    if (filasDetalles === 0) {
+        alert('Agrega al menos una línea de compra');
+        return;
+    }
+
+    // Reconstruir detalles desde el formulario
+    const detallesActuales = [];
+    document.querySelectorAll('#detallesCompra tr').forEach(row => {
+        const cantidadInput = row.querySelector('.cantidad');
+        const precioInput = row.querySelector('.precio');
+        const conceptoInput = row.querySelector('.concepto');
+        const productoIdInput = row.querySelector('.producto-id');
+        
+        const cantidad = cantidadInput ? parseFloat(cantidadInput.value || 0) : 1;
+        const precio = precioInput ? parseFloat(precioInput.value || 0) : 0;
+        const concepto = conceptoInput ? conceptoInput.value : '';
+        const productoId = productoIdInput ? productoIdInput.value : null;
+        
+        if (cantidad > 0 && precio > 0) {
+            detallesActuales.push({
+                producto_id: productoId,
+                cantidad: cantidad,
+                precio_unitario: precio,
+                concepto: concepto,
+                subtotal: cantidad * precio
+            });
+        }
+    });
+
+    if (detallesActuales.length === 0) {
+        alert('Agrega detalles válidos');
+        return;
+    }
+
+    document.getElementById('detalles_json').value = JSON.stringify(detallesActuales);
+    document.getElementById('formRegistrarCompra').submit();
+}
+
+function buscarProveedores() {
+    const term = document.getElementById('proveedor_buscar').value.trim();
+    const lista = document.getElementById('proveedor_sugerencias');
+    lista.innerHTML = '';
+    if (!term || term.length < 2) { return; }
+    fetch(`{{ url_for('compras.api_proveedores') }}?term=${encodeURIComponent(term)}`)
+        .then(r => r.json())
+        .then(items => {
+            if (!Array.isArray(items) || items.length === 0) { return; }
+            items.forEach(p => {
+                const a = document.createElement('a');
+                a.href = '#';
+                a.className = 'list-group-item list-group-item-action';
+                a.innerHTML = `<strong>${p.razon_social}</strong><br><small>RUC: ${p.ruc} | Tel: ${p.telefono || '-'} | Email: ${p.email || '-'}</small>`;
+                a.addEventListener('click', (ev) => {
+                    ev.preventDefault();
+                    seleccionarProveedor(p);
+                });
+                lista.appendChild(a);
+            });
+        })
+        .catch(e => console.error('Error buscando proveedores:', e));
+}
+
+function seleccionarProveedor(p) {
+    proveedorSeleccionado = p;
+    document.getElementById('proveedor_id').value = p.id;
+    document.getElementById('proveedor_buscar').value = `${p.razon_social}`;
+    document.getElementById('proveedor_sugerencias').innerHTML = '';
+    document.getElementById('proveedor_seleccionado').textContent = `Seleccionado: ${p.razon_social} (RUC: ${p.ruc})`;
+}
+
+function debounce(fn, delay) {
+    let t;
+    return function(...args) {
+        clearTimeout(t);
+        t = setTimeout(() => fn.apply(this, args), delay);
+    };
+}
+
+function formatoNumero(valor) {
+    const num = Number(valor) || 0;
+    return num.toLocaleString('es-PY', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+function formatPrecioEnVivo(id) {
+    const row = document.getElementById(`detalle_${id}`);
+    const precioInput = row.querySelector('.precio');
+    if (precioInput && precioInput.value) {
+        const valor = parseFloat(precioInput.value);
+        if (!isNaN(valor)) {
+            // Mostrar en vivo (opcional: podrías usar un span al lado del input)
+            actualizarTotales();
+        }
+    }
+}
+</script>
+{% endblock %}

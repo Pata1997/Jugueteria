@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Usuarios{% endblock %}
+{% block page_title %}Gestión de Usuarios{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <i class="fas fa-users"></i> Lista de Usuarios
+                    </div>
+                    <div class="col-auto">
+                        <a href="{{ url_for('configuracion.crear_usuario') }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> Nuevo Usuario
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Nombre Completo</th>
+                                <th>Rol</th>
+                                <th>Email</th>
+                                <th>Estado</th>
+                                <th>Último Acceso</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for usuario in usuarios %}
+                            <tr>
+                                <td><strong>{{ usuario.username }}</strong></td>
+                                <td>{{ usuario.nombre }} {{ usuario.apellido }}</td>
+                                <td>
+                                    {% if usuario.rol == 'admin' %}
+                                        <span class="badge bg-danger">Administrador</span>
+                                    {% elif usuario.rol == 'vendedor' %}
+                                        <span class="badge bg-primary">Vendedor</span>
+                                    {% elif usuario.rol == 'cajero' %}
+                                        <span class="badge bg-success">Cajero</span>
+                                    {% elif usuario.rol == 'tecnico' %}
+                                        <span class="badge bg-info">Técnico</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ usuario.email or '-' }}</td>
+                                <td>
+                                    {% if usuario.activo %}
+                                        <span class="badge bg-success">Activo</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactivo</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if usuario.ultimo_acceso %}
+                                        {{ usuario.ultimo_acceso.strftime('%d/%m/%Y %H:%M') }}
+                                    {% else %}
+                                        <span class="text-muted">Nunca</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('configuracion.editar_usuario', id=usuario.id) }}" class="btn btn-sm btn-warning" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% if usuario.id != current_user.id %}
+                                    <button class="btn btn-sm btn-danger" onclick="eliminarUsuario({{ usuario.id }})" title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function eliminarUsuario(userId) {
+    if (confirm('¿Está seguro de eliminar este usuario?')) {
+        $.post('{{ url_for("configuracion.eliminar_usuario") }}', {user_id: userId})
+            .done(function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + response.error);
+                }
+            })
+            .fail(function(xhr) {
+                alert('Error: ' + (xhr.responseJSON ? xhr.responseJSON.error : 'Error desconocido'));
+            });
+    }
+}
+</script>
+{% endblock %}

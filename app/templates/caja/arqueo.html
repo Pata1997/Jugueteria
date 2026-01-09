@@ -1,0 +1,355 @@
+{% extends "base.html" %}
+
+{% block title %}Arqueo de Caja #{{ apertura.id }}{% endblock %}
+{% block page_title %}Arqueo Detallado{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-3">
+        <a href="{{ url_for('caja.ver_apertura', apertura_id=apertura.id) }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver a Detalle
+        </a>
+        <button onclick="window.print()" class="btn btn-primary float-end">
+            <i class="fas fa-print"></i> Imprimir Arqueo
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm" id="arqueo-print">
+            <!-- ENCABEZADO -->
+            <div class="card-header bg-warning">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h4 class="mb-0"><i class="fas fa-calculator"></i> ARQUEO DE CAJA</h4>
+                        <p class="mb-0"><strong>Caja:</strong> {{ apertura.caja.nombre }} | <strong>Apertura #{{ apertura.id }}</strong></p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        {% if apertura.fecha_cierre %}
+                            <small>Cierre: {{ apertura.fecha_cierre.strftime('%d/%m/%Y %H:%M:%S') }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <!-- INFORMACIÓN DEL TURNO -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="text-muted">INFORMACIÓN DEL TURNO</h6>
+                                <table class="table table-sm table-borderless mb-0">
+                                    <tr>
+                                        <td><strong>Cajero:</strong></td>
+                                        <td>{{ apertura.cajero.username }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Apertura:</strong></td>
+                                        <td>{{ apertura.fecha_apertura.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Cierre:</strong></td>
+                                        <td>{{ apertura.fecha_cierre.strftime('%d/%m/%Y %H:%M:%S') if apertura.fecha_cierre else 'Abierta' }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Duración:</strong></td>
+                                        <td>
+                                            {% if apertura.fecha_cierre %}
+                                                {% set duracion = apertura.fecha_cierre - apertura.fecha_apertura %}
+                                                {{ duracion.days }}d {{ (duracion.seconds // 3600) }}h {{ ((duracion.seconds % 3600) // 60) }}m
+                                            {% else %}
+                                                En curso
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="text-muted">OPERACIONES</h6>
+                                <table class="table table-sm table-borderless mb-0">
+                                    <tr>
+                                        <td><strong>Total Ventas:</strong></td>
+                                        <td class="text-end"><strong>{{ ventas|length }}</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Monto Total Ventas:</strong></td>
+                                        <td class="text-end">Gs. {{ "{:,.0f}".format(total_ventas) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="2">
+                                            {% if apertura.observaciones_cierre %}
+                                                <small><strong>Obs:</strong> {{ apertura.observaciones_cierre }}</small>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- DETALLE POR FORMA DE PAGO -->
+                <h5 class="border-bottom pb-2 mb-3">
+                    <i class="fas fa-money-check-alt"></i> Detalle por Forma de Pago
+                </h5>
+
+                <div class="table-responsive mb-4">
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Forma de Pago</th>
+                                <th class="text-center">Cantidad Ventas</th>
+                                <th class="text-end">Monto Sistema</th>
+                                <th class="text-end">Monto Contado</th>
+                                <th class="text-end">Diferencia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for forma, data in pagos_por_forma.items() %}
+                            <tr>
+                                <td>
+                                    <i class="fas 
+                                        {% if 'efectivo' in forma|lower %}fa-money-bill-wave text-success
+                                        {% elif 'tarjeta' in forma|lower %}fa-credit-card text-info
+                                        {% else %}fa-coins text-warning{% endif %}">
+                                    </i>
+                                    <strong>{{ forma }}</strong>
+                                </td>
+                                <td class="text-center">{{ data.cantidad }}</td>
+                                <td class="text-end">Gs. {{ "{:,.0f}".format(data.total) }}</td>
+                                <td class="text-end">
+                                    {% if 'efectivo' in forma|lower %}
+                                        Gs. {{ "{:,.0f}".format(apertura.monto_efectivo - apertura.monto_inicial) }}
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {% if 'efectivo' in forma|lower %}
+                                        {% set dif_efectivo = (apertura.monto_efectivo - apertura.monto_inicial) - data.total %}
+                                        {% if dif_efectivo == 0 %}
+                                            <span class="badge bg-success">Cuadrado</span>
+                                        {% elif dif_efectivo > 0 %}
+                                            <span class="badge bg-warning">+{{ "{:,.0f}".format(dif_efectivo) }}</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">{{ "{:,.0f}".format(dif_efectivo) }}</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <th>TOTALES</th>
+                                <th class="text-center">{{ ventas|length }}</th>
+                                <th class="text-end">Gs. {{ "{:,.0f}".format(total_ventas) }}</th>
+                                <th class="text-end">-</th>
+                                <th class="text-end">-</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- RESUMEN EFECTIVO -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card border-primary">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0"><i class="fas fa-calculator"></i> CÁLCULO EFECTIVO</h6>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td>Monto Inicial:</td>
+                                        <td class="text-end">Gs. {{ "{:,.0f}".format(apertura.monto_inicial) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>+ Efectivo Ventas:</td>
+                                        <td class="text-end">Gs. {{ "{:,.0f}".format(total_efectivo) }}</td>
+                                    </tr>
+                                    <tr class="table-light">
+                                        <td><strong>= Monto Sistema:</strong></td>
+                                        <td class="text-end"><strong>Gs. {{ "{:,.0f}".format(apertura.monto_sistema) }}</strong></td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card border-success">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0"><i class="fas fa-hand-holding-usd"></i> CONTEO FÍSICO</h6>
+                            </div>
+                            <div class="card-body">
+                                <table class="table table-sm">
+                                    <tr>
+                                        <td>Efectivo Contado:</td>
+                                        <td class="text-end">Gs. {{ "{:,.0f}".format(apertura.monto_efectivo) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Tarjetas (Ref.):</td>
+                                        <td class="text-end">Gs. {{ "{:,.0f}".format(apertura.monto_tarjeta or 0) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Otros (Ref.):</td>
+                                        <td class="text-end">Gs. {{ "{:,.0f}".format(apertura.monto_otros or 0) }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RESULTADO FINAL DEL ARQUEO -->
+                {% set diferencia_total = apertura.monto_efectivo - apertura.monto_sistema %}
+                <div class="card 
+                    {% if diferencia_total == 0 %}border-success
+                    {% elif diferencia_total > 0 %}border-warning
+                    {% else %}border-danger{% endif %}">
+                    <div class="card-body text-center">
+                        <h4 class="mb-3">
+                            <i class="fas fa-balance-scale"></i> RESULTADO DEL ARQUEO
+                        </h4>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <p class="text-muted mb-1">Monto Sistema</p>
+                                <h3>Gs. {{ "{:,.0f}".format(apertura.monto_sistema) }}</h3>
+                            </div>
+                            <div class="col-md-4">
+                                <p class="text-muted mb-1">Efectivo Contado</p>
+                                <h3>Gs. {{ "{:,.0f}".format(apertura.monto_efectivo) }}</h3>
+                            </div>
+                            <div class="col-md-4">
+                                <p class="text-muted mb-1">Diferencia</p>
+                                {% if diferencia_total == 0 %}
+                                    <h3 class="text-success">
+                                        <i class="fas fa-check-circle"></i> CUADRADO
+                                    </h3>
+                                {% elif diferencia_total > 0 %}
+                                    <h3 class="text-warning">
+                                        <i class="fas fa-arrow-up"></i> SOBRANTE<br>
+                                        Gs. {{ "{:,.0f}".format(diferencia_total) }}
+                                    </h3>
+                                {% else %}
+                                    <h3 class="text-danger">
+                                        <i class="fas fa-arrow-down"></i> FALTANTE<br>
+                                        Gs. {{ "{:,.0f}".format(abs(diferencia_total)) }}
+                                    </h3>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LISTADO DE VENTAS DETALLADO -->
+                <div class="mt-4">
+                    <h5 class="border-bottom pb-2 mb-3">
+                        <i class="fas fa-list-alt"></i> Listado de Ventas ({{ ventas|length }})
+                    </h5>
+                    
+                    {% if ventas %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Factura</th>
+                                        <th>Hora</th>
+                                        <th>Cliente</th>
+                                        <th class="text-end">Total</th>
+                                        <th>Pagos</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for venta in ventas %}
+                                    <tr>
+                                        <td>{{ loop.index }}</td>
+                                        <td><small>{{ venta.numero_factura }}</small></td>
+                                        <td><small>{{ venta.fecha_venta.strftime('%H:%M:%S') }}</small></td>
+                                        <td><small>{{ venta.cliente.nombre if venta.cliente else 'Consumidor Final' }}</small></td>
+                                        <td class="text-end"><small>Gs. {{ "{:,.0f}".format(venta.total) }}</small></td>
+                                        <td>
+                                            {% for pago in venta.pagos %}
+                                                <small class="badge 
+                                                    {% if pago.forma_pago.nombre|lower == 'efectivo' %}bg-success
+                                                    {% elif 'tarjeta' in pago.forma_pago.nombre|lower %}bg-info
+                                                    {% else %}bg-warning text-dark{% endif %}">
+                                                    {{ pago.forma_pago.nombre }}: {{ "{:,.0f}".format(pago.monto) }}
+                                                </small>
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- FIRMAS -->
+                <div class="row mt-5 pt-4 no-print">
+                    <div class="col-md-6 text-center">
+                        <div class="border-top pt-2">
+                            <strong>{{ apertura.cajero.username }}</strong><br>
+                            <small class="text-muted">Cajero</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-center">
+                        <div class="border-top pt-2">
+                            <strong>_____________________</strong><br>
+                            <small class="text-muted">Supervisor/Gerente</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-footer text-muted text-center">
+                <small>
+                    Documento generado el {{ now.strftime('%d/%m/%Y %H:%M:%S') }} | 
+                    Sistema de Gestión - Juguetería
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .no-print, .btn, .card-footer, nav, .sidebar {
+        display: none !important;
+    }
+    
+    body {
+        background: white;
+    }
+    
+    .card {
+        border: none;
+        box-shadow: none;
+    }
+    
+    .card-body {
+        padding: 15px;
+    }
+    
+    table {
+        font-size: 11px;
+    }
+    
+    h4, h5 {
+        font-size: 14px;
+    }
+}
+</style>
+{% endblock %}

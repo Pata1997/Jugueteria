@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Sistema de Gestión{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Estadísticas -->
+    <div class="col-md-3 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Clientes Activos
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_clientes }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-users fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Ventas del Mes
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            Gs. {{ "{:,.0f}".format(total_ventas_mes) }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Productos
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_productos }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-box fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Servicios Pendientes
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ servicios_pendientes }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-wrench fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Productos con Stock Bajo -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-exclamation-triangle"></i> Productos con Stock Bajo
+            </div>
+            <div class="card-body">
+                {% if productos_stock_bajo %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Producto</th>
+                                <th>Stock</th>
+                                <th>Mínimo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for producto in productos_stock_bajo[:10] %}
+                            <tr>
+                                <td>{{ producto.codigo }}</td>
+                                <td>{{ producto.nombre }}</td>
+                                <td><span class="badge bg-danger">{{ producto.stock_actual }}</span></td>
+                                <td>{{ producto.stock_minimo }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <a href="{{ url_for('productos.stock_bajo') }}" class="btn btn-sm btn-primary">Ver Todos</a>
+                {% else %}
+                <p class="text-muted">No hay productos con stock bajo</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Accesos Rápidos -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-bolt"></i> Accesos Rápidos
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <a href="{{ url_for('ventas.crear') }}" class="btn btn-success btn-block w-100">
+                            <i class="fas fa-shopping-cart"></i><br>Nueva Venta
+                        </a>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <a href="{{ url_for('servicios.crear_solicitud') }}" class="btn btn-info btn-block w-100">
+                            <i class="fas fa-wrench"></i><br>Nueva Solicitud
+                        </a>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <a href="{{ url_for('clientes.crear') }}" class="btn btn-primary btn-block w-100">
+                            <i class="fas fa-user-plus"></i><br>Nuevo Cliente
+                        </a>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <a href="{{ url_for('productos.crear') }}" class="btn btn-warning btn-block w-100">
+                            <i class="fas fa-box"></i><br>Nuevo Producto
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

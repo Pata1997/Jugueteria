@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+
+{% block title %}Estado de Caja{% endblock %}
+{% block page_title %}Estado de Caja{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-cash-register"></i> Control de Caja
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if apertura_actual %}
+                    <!-- CAJA ABIERTA -->
+                    <div class="alert alert-success border-left-success">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1">
+                                    <i class="fas fa-check-circle"></i> Caja Abierta
+                                </h5>
+                                <p class="mb-0">
+                                    <strong>Caja:</strong> {{ apertura_actual.caja.nombre }}<br>
+                                    <strong>Apertura:</strong> {{ apertura_actual.fecha_apertura.strftime('%d/%m/%Y %H:%M') }}<br>
+                                    <strong>Monto inicial:</strong> Gs. {{ "{:,.0f}".format(apertura_actual.monto_inicial) }}
+                                </p>
+                            </div>
+                            <div>
+                                <button class="btn btn-danger btn-lg" data-bs-toggle="modal" data-bs-target="#modalCerrarCaja">
+                                    <i class="fas fa-lock"></i> Cerrar Caja
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RESUMEN DE OPERACIONES -->
+                    <div class="row mt-4">
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-shopping-cart fa-2x text-primary mb-2"></i>
+                                    <h6>Total Ventas</h6>
+                                    <h4 class="mb-0">{{ ventas_list|length }}</h4>
+                                    <small class="text-muted">Gs. {{ "{:,.0f}".format(total_ventas) }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-money-bill-wave fa-2x text-success mb-2"></i>
+                                    <h6>Efectivo</h6>
+                                    <h4 class="mb-0">Gs. {{ "{:,.0f}".format(total_efectivo) }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-credit-card fa-2x text-info mb-2"></i>
+                                    <h6>Tarjetas</h6>
+                                    <h4 class="mb-0">Gs. {{ "{:,.0f}".format(total_tarjeta) }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-coins fa-2x text-warning mb-2"></i>
+                                    <h6>Otros</h6>
+                                    <h4 class="mb-0">Gs. {{ "{:,.0f}".format(total_otros) }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TOTAL ESPERADO EN CAJA (SISTEMA) -->
+                    <div class="row mt-3">
+                        <div class="col-md-12">
+                            <div class="card bg-light">
+                                <div class="card-body d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-wallet fa-lg text-secondary me-2"></i>
+                                        <strong>Total esperado en caja (Sistema):</strong>
+                                    </div>
+                                    <div class="h4 mb-0">Gs. {{ "{:,.0f}".format(apertura_actual.monto_inicial + total_efectivo) }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ÚLTIMAS VENTAS -->
+                    <div class="mt-4">
+                        <h6><i class="fas fa-list"></i> Últimas Ventas</h6>
+                        {% if ventas_list %}
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Factura</th>
+                                            <th>Fecha</th>
+                                            <th>Cliente</th>
+                                            <th class="text-end">Total</th>
+                                            <th>Estado Pago</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for venta in ventas_list[-10:] %}
+                                        <tr>
+                                            <td><small>{{ venta.numero_factura }}</small></td>
+                                            <td><small>{{ venta.fecha_venta.strftime('%H:%M') }}</small></td>
+                                            <td><small>{{ venta.cliente.nombre if venta.cliente else 'N/A' }}</small></td>
+                                            <td class="text-end"><small>Gs. {{ "{:,.0f}".format(venta.total) }}</small></td>
+                                            <td>
+                                                <span class="badge bg-success">{{ venta.estado_pago }}</span>
+                                            </td>
+                                            <td>
+                                                <a href="{{ url_for('ventas.ver', id=venta.id) }}" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-muted text-center">No hay ventas registradas</p>
+                        {% endif %}
+                    </div>
+
+                {% else %}
+                    <!-- CAJA CERRADA - OPCIONES PARA ABRIR -->
+                    <div class="alert alert-info border-left-info">
+                        <h5><i class="fas fa-info-circle"></i> No tienes una caja abierta</h5>
+                        <p class="mb-0">Para comenzar a operar, debes abrir una caja.</p>
+                    </div>
+
+                    <div class="row justify-content-center mt-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header bg-success text-white">
+                                    <h5 class="mb-0"><i class="fas fa-lock-open"></i> Abrir Caja</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form method="POST" action="{{ url_for('caja.abrir') }}">
+                                        <div class="mb-3">
+                                            <label class="form-label">Seleccionar Caja *</label>
+                                            <select name="caja_id" class="form-select" required>
+                                                <option value="">Seleccione...</option>
+                                                {% for caja in cajas %}
+                                                    <option value="{{ caja.id }}">{{ caja.nombre }} ({{ caja.numero_caja }})</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label">Monto Inicial (Gs.) *</label>
+                                            <input type="number" name="monto_inicial" class="form-control" 
+                                                   value="0" required min="0" step="1">
+                                            <small class="text-muted">Efectivo con el que se abre la caja</small>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label class="form-label">Observaciones</label>
+                                            <textarea name="observaciones" class="form-control" rows="2"></textarea>
+                                        </div>
+
+                                        <button type="submit" class="btn btn-success w-100">
+                                            <i class="fas fa-lock-open"></i> Abrir Caja
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- ACCESO RÁPIDO -->
+                <div class="mt-4">
+                    <h6><i class="fas fa-history"></i> Accesos Rápidos</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <a href="{{ url_for('caja.historial') }}" class="btn btn-outline-secondary w-100 mb-2">
+                                <i class="fas fa-list"></i> Ver Historial de Cajas
+                            </a>
+                        </div>
+                        {% if current_user.rol == 'admin' %}
+                        <div class="col-md-6">
+                            <a href="{{ url_for('reportes.index') }}" class="btn btn-outline-primary w-100 mb-2">
+                                <i class="fas fa-chart-bar"></i> Reportes de Caja
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CERRAR CAJA -->
+{% if apertura_actual %}
+<div class="modal fade" id="modalCerrarCaja" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-lock"></i> Cerrar Caja y Realizar Arqueo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('caja.cerrar') }}">
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <strong><i class="fas fa-exclamation-triangle"></i> Importante:</strong>
+                        Al cerrar la caja, debes contar todo el efectivo y registrar los montos reales.
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="text-muted">SISTEMA</h6>
+                                    <p class="mb-1"><strong>Monto Inicial:</strong> Gs. {{ "{:,.0f}".format(apertura_actual.monto_inicial) }}</p>
+                                    <p class="mb-1"><strong>Efectivo Ventas:</strong> Gs. {{ "{:,.0f}".format(total_efectivo) }}</p>
+                                    <hr>
+                                    <p class="mb-0 h5"><strong>Total Sistema:</strong> Gs. {{ "{:,.0f}".format(apertura_actual.monto_inicial + total_efectivo) }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="text-muted">RESUMEN</h6>
+                                    <p class="mb-1"><strong>Tarjetas:</strong> Gs. {{ "{:,.0f}".format(total_tarjeta) }}</p>
+                                    <p class="mb-1"><strong>Otros:</strong> Gs. {{ "{:,.0f}".format(total_otros) }}</p>
+                                    <hr>
+                                    <p class="mb-0"><strong>Ventas Totales:</strong> {{ ventas_list|length }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6 class="border-bottom pb-2">Arqueo - Contar Efectivo Real</h6>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label"><i class="fas fa-money-bill-wave text-success"></i> Efectivo Contado *</label>
+                            <input type="number" name="monto_efectivo" id="monto_efectivo" 
+                                   class="form-control" required min="0" step="1"
+                                   value="{{ apertura_actual.monto_inicial + total_efectivo }}">
+                            <small class="text-muted">Total en efectivo en caja</small>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label"><i class="fas fa-credit-card text-info"></i> Tarjetas (Referencia)</label>
+                            <input type="number" name="monto_tarjeta" class="form-control" 
+                                   min="0" step="1" value="{{ total_tarjeta }}" readonly>
+                            <small class="text-muted">No se cuenta físicamente</small>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label"><i class="fas fa-coins text-warning"></i> Otros (Referencia)</label>
+                            <input type="number" name="monto_otros" class="form-control" 
+                                   min="0" step="1" value="{{ total_otros }}" readonly>
+                            <small class="text-muted">Transferencias, cheques, etc.</small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Observaciones de Cierre</label>
+                        <textarea name="observaciones_cierre" class="form-control" rows="2" 
+                                  placeholder="Agregar cualquier nota relevante..."></textarea>
+                    </div>
+
+                    <div id="diferencia-alert" class="alert alert-info" style="display:none;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-lock"></i> Cerrar Caja y Arquear
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Calcular diferencia en tiempo real
+document.getElementById('monto_efectivo').addEventListener('input', function() {
+    const montoContado = parseFloat(this.value) || 0;
+    const montoSistema = {{ apertura_actual.monto_inicial + total_efectivo }};
+    const diferencia = montoContado - montoSistema;
+    
+    const alertDiv = document.getElementById('diferencia-alert');
+    
+    if (Math.abs(diferencia) < 1) {
+        alertDiv.style.display = 'none';
+    } else {
+        alertDiv.style.display = 'block';
+        
+        if (diferencia > 0) {
+            alertDiv.className = 'alert alert-warning';
+            alertDiv.innerHTML = `<strong><i class="fas fa-exclamation-triangle"></i> Sobrante:</strong> Gs. ${diferencia.toLocaleString('es-PY')}`;
+        } else {
+            alertDiv.className = 'alert alert-danger';
+            alertDiv.innerHTML = `<strong><i class="fas fa-exclamation-circle"></i> Faltante:</strong> Gs. ${Math.abs(diferencia).toLocaleString('es-PY')}`;
+        }
+    }
+});
+</script>
+{% endif %}
+
+<style>
+.border-left-success {
+    border-left: 4px solid #28a745;
+}
+.border-left-info {
+    border-left: 4px solid #17a2b8;
+}
+</style>
+{% endblock %}

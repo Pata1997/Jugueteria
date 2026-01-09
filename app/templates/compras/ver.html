@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}Ver Compra{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <!-- ENCABEZADO -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h3">
+                    <i class="fas fa-file-invoice"></i> Compra {{ compra.numero_compra }}
+                </h1>
+                <div>
+                    <a href="{{ url_for('compras.pendientes_pago') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Volver
+                    </a>
+                    {% if compra.estado == 'registrada' %}
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalPagar">
+                        <i class="fas fa-money-bill-wave"></i> Pagar
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- INFORMACIÓN GENERAL -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Información General</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <th width="40%">Número de Compra:</th>
+                                <td><strong>{{ compra.numero_compra }}</strong></td>
+                            </tr>
+                            {% if compra.numero_factura %}
+                            <tr>
+                                <th>Nro. Factura proveedor:</th>
+                                <td>{{ compra.numero_factura }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if compra.fecha_factura %}
+                            <tr>
+                                <th>Fecha factura:</th>
+                                <td>{{ compra.fecha_factura.strftime('%d/%m/%Y') }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <th>Proveedor:</th>
+                                <td>{{ compra.proveedor.razon_social }}</td>
+                            </tr>
+                            <tr>
+                                <th>Tipo:</th>
+                                <td>
+                                    <span class="badge" style="background-color: {% if compra.tipo == 'producto' %}#007bff{% elif compra.tipo == 'servicio' %}#28a745{% elif compra.tipo == 'factura' %}#fd7e14{% else %}#6c757d{% endif %};">
+                                        {{ compra.tipo | upper }}
+                                    </span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Fecha Compra:</th>
+                                <td>{{ compra.fecha_compra.strftime('%d/%m/%Y %H:%M') }}</td>
+                            </tr>
+                            <tr>
+                                <th>Registrado por:</th>
+                                <td>{{ compra.usuario_registra.nombre if compra.usuario_registra else 'N/A' }}</td>
+                            </tr>
+                            <tr>
+                                <th>Estado:</th>
+                                <td>
+                                    {% if compra.estado == 'registrada' %}
+                                        <span class="badge bg-warning">No Pagado</span>
+                                    {% elif compra.estado == 'parcial_pagada' %}
+                                        <span class="badge bg-info">Pago Parcial</span>
+                                    {% elif compra.estado == 'pagada' %}
+                                        <span class="badge bg-success">Pagado</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    {% if compra.descripcion %}
+                    <div class="mt-3">
+                        <strong>Descripción:</strong>
+                        <p class="text-muted">{{ compra.descripcion }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- TOTALES -->
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-calculator"></i> Totales</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <th width="40%">Subtotal:</th>
+                                <td class="text-end">Gs. {{ "{:,.0f}".format(compra.subtotal or 0) }}</td>
+                            </tr>
+                            <tr>
+                                <th>IVA (10%):</th>
+                                <td class="text-end">Gs. {{ "{:,.0f}".format(compra.iva or 0) }}</td>
+                            </tr>
+                            <tr class="table-active">
+                                <th><strong>TOTAL:</strong></th>
+                                <td class="text-end"><strong>Gs. {{ "{:,.0f}".format(compra.total or 0) }}</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    {% if compra.stock_actualizado %}
+                    <div class="alert alert-success mt-3 mb-0">
+                        <i class="fas fa-check-circle"></i> Stock actualizado
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DETALLES DE LA COMPRA -->
+    <div class="card mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="fas fa-list"></i> Detalles de la Compra</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            {% if compra.tipo == 'producto' %}
+                            <th>Código</th>
+                            <th>Producto</th>
+                            <th class="text-center">Cantidad</th>
+                            <th class="text-end">Precio Unitario</th>
+                            <th class="text-end">Subtotal</th>
+                            {% else %}
+                            <th>Concepto/Descripción</th>
+                            <th class="text-center">Cantidad</th>
+                            <th class="text-end">Precio</th>
+                            <th class="text-end">Subtotal</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for detalle in compra.detalles %}
+                        <tr>
+                            {% if compra.tipo == 'producto' and detalle.producto %}
+                            <td>{{ detalle.producto.codigo }}</td>
+                            <td>{{ detalle.producto.nombre }}</td>
+                            <td class="text-center">{{ detalle.cantidad }}</td>
+                            <td class="text-end">Gs. {{ "{:,.0f}".format(detalle.precio_unitario) }}</td>
+                            <td class="text-end">Gs. {{ "{:,.0f}".format(detalle.subtotal) }}</td>
+                            {% else %}
+                            <td>{{ detalle.concepto }}</td>
+                            <td class="text-center">{{ detalle.cantidad }}</td>
+                            <td class="text-end">Gs. {{ "{:,.0f}".format(detalle.precio_unitario) }}</td>
+                            <td class="text-end">Gs. {{ "{:,.0f}".format(detalle.subtotal) }}</td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- HISTORIAL DE PAGOS -->
+    {% if compra.pagos %}
+    <div class="card">
+        <div class="card-header bg-warning">
+            <h5 class="mb-0"><i class="fas fa-history"></i> Historial de Pagos</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Monto</th>
+                            <th>Origen</th>
+                            <th>Referencia</th>
+                            <th>Registrado por</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pago in compra.pagos %}
+                        <tr>
+                            <td>{{ pago.fecha_pago.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>Gs. {{ "{:,.0f}".format(pago.monto) }}</td>
+                            <td>
+                                {% if pago.origen_pago == 'caja_chica' %}
+                                    <span class="badge bg-primary">Caja Chica</span>
+                                {% elif pago.origen_pago == 'otra_fuente' %}
+                                    <span class="badge bg-secondary">Otra Fuente</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ pago.referencia or '-' }}</td>
+                            <td>{{ pago.usuario_paga.nombre if pago.usuario_paga else 'N/A' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- MODAL PAGAR (igual al de pendientes_pago.html) -->
+<div class="modal fade" id="modalPagar" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-credit-card"></i> Registrar Pago de Compra</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form method="POST" action="{{ url_for('compras.pagar_compra', id=compra.id) }}">
+                <div class="modal-body">
+                    <div class="alert alert-light border mb-3">
+                        <small>
+                            <strong>Compra:</strong> {{ compra.numero_compra }}<br>
+                            <strong>Total Compra:</strong> Gs. {{ "{:,.0f}".format(compra.total) }}
+                        </small>
+                    </div>
+
+                    <!-- MONTO A PAGAR -->
+                    <div class="mb-3">
+                        <label for="monto" class="form-label required">Monto a Pagar</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Gs.</span>
+                            <input type="number" class="form-control" id="monto" name="monto" 
+                                   value="{{ compra.total }}" min="0" step="0.01" required>
+                        </div>
+                    </div>
+
+                    <!-- ORIGEN DEL PAGO -->
+                    <div class="mb-4">
+                        <label class="form-label required">Origen del Pago</label>
+                        
+                        <div class="form-check mb-3 border-start border-primary ps-3">
+                            <input class="form-check-input" type="radio" name="origen_pago" 
+                                   id="origen_caja" value="caja_chica" checked>
+                            <label class="form-check-label" for="origen_caja">
+                                <strong><i class="fas fa-cash-register"></i> Caja Chica (Descuenta de Apertura)</strong>
+                            </label>
+                        </div>
+
+                        <div class="form-check mb-3 border-start border-warning ps-3">
+                            <input class="form-check-input" type="radio" name="origen_pago" 
+                                   id="origen_otra" value="otra_fuente">
+                            <label class="form-check-label" for="origen_otra">
+                                <strong><i class="fas fa-external-link-alt"></i> Otra Fuente (No afecta Caja)</strong>
+                            </label>
+                        </div>
+
+                        <div class="form-check border-start border-danger ps-3">
+                            <input class="form-check-input" type="radio" name="origen_pago" 
+                                   id="origen_credito" value="dejar_credito">
+                            <label class="form-check-label" for="origen_credito">
+                                <strong><i class="fas fa-handshake"></i> Dejar a Crédito</strong>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="referencia" class="form-label">Referencia</label>
+                        <input type="text" class="form-control" id="referencia" name="referencia">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check"></i> Confirmar Pago
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

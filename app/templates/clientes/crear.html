@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo Cliente{% endblock %}
+{% block page_title %}Nuevo Cliente{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-user-plus"></i> Registrar Nuevo Cliente
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label for="tipo_documento" class="form-label">Tipo Documento *</label>
+                    <select class="form-select" id="tipo_documento" name="tipo_documento" required>
+                        <option value="CI">CI</option>
+                        <option value="RUC">RUC</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-5 mb-3">
+                    <label for="numero_documento" class="form-label">Número Documento *</label>
+                    <input type="text" class="form-control" id="numero_documento" name="numero_documento" required>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label for="tipo_cliente" class="form-label">Tipo Cliente *</label>
+                    <select class="form-select" id="tipo_cliente" name="tipo_cliente" required>
+                        <option value="particular">Particular</option>
+                        <option value="empresa">Empresa</option>
+                        <option value="gobierno">Gobierno</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <label for="nombre" class="form-label">Nombre / Razón Social *</label>
+                    <input type="text" class="form-control" id="nombre" name="nombre" required>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-12 mb-3">
+                    <label for="direccion" class="form-label">Dirección</label>
+                    <input type="text" class="form-control" id="direccion" name="direccion">
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="telefono" class="form-label">Teléfono</label>
+                    <input type="text" class="form-control" id="telefono" name="telefono">
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="email" name="email">
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="limite_credito" class="form-label">Límite de Crédito (Gs.)</label>
+                    <input type="number" class="form-control" id="limite_credito" name="limite_credito" value="0" min="0">
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="descuento_especial" class="form-label">Descuento Especial (%)</label>
+                    <input type="number" step="0.01" class="form-control" id="descuento_especial" name="descuento_especial" value="0" min="0" max="100">
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="observaciones" class="form-label">Observaciones</label>
+                <textarea class="form-control" id="observaciones" name="observaciones" rows="3"></textarea>
+            </div>
+            
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Guardar
+                </button>
+                <a href="{{ url_for('clientes.listar') }}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Apertura de Caja{% endblock %}
+{% block page_title %}Apertura de Caja{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-cash-register"></i> Abrir Caja
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Caja *</label>
+                        <select class="form-select" name="caja_id" required>
+                            <option value="">Seleccione...</option>
+                            {% for caja in cajas %}
+                                <option value="{{ caja.id }}">{{ caja.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Monto Inicial (Gs.) *</label>
+                        <input type="number" class="form-control" name="monto_inicial" min="0" step="0.01" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Observaciones</label>
+                        <textarea class="form-control" name="observaciones" rows="2" placeholder="Notas opcionales..."></textarea>
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a href="{{ url_for('ventas.cajas') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Volver
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-unlock"></i> Abrir Caja
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i> Reglas y Consejos
+            </div>
+            <div class="card-body small">
+                <ul class="mb-0">
+                    <li>Solo puede haber una caja abierta por cajero.</li>
+                    <li>El monto inicial debe coincidir con el efectivo disponible.</li>
+                    <li>Registre observaciones si recibe efectivo de otro cajero o supervisor.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

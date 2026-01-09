@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+
+{% block title %}Solicitud de Servicio - {{ solicitud.numero_solicitud }}{% endblock %}
+{% block page_title %}Solicitud de Servicio {{ solicitud.numero_solicitud }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-tools"></i> Datos de la Solicitud</span>
+                <span class="badge bg-info">{{ solicitud.estado|upper }}</span>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Número de Solicitud:</strong><br>
+                        {{ solicitud.numero_solicitud }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Fecha de Solicitud:</strong><br>
+                        {{ solicitud.fecha_solicitud.strftime('%d/%m/%Y %H:%M') }}
+                    </div>
+                </div>
+
+                <hr>
+
+                <h5><i class="fas fa-user"></i> Información del Cliente</h5>
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <strong>Cliente:</strong> {{ solicitud.cliente.nombre }}<br>
+                        <strong>Documento:</strong> {{ solicitud.cliente.tipo_documento }} {{ solicitud.cliente.numero_documento }}<br>
+                        <strong>Teléfono:</strong> {{ solicitud.cliente.telefono or 'No registrado' }}<br>
+                        <strong>Dirección:</strong> {{ solicitud.cliente.direccion or 'No especificada' }}
+                    </div>
+                </div>
+
+                <hr>
+
+                <h5><i class="fas fa-file-alt"></i> Descripción del Problema/Servicio</h5>
+                <div class="mb-3 p-3 bg-light rounded">
+                    {{ solicitud.descripcion }}
+                </div>
+
+                {% if solicitud.observaciones %}
+                    {% set obs_partes = solicitud.observaciones.split('[LÍNEAS]') %}
+                    {% if obs_partes|length > 1 %}
+                        {% set obs_usuario = obs_partes[0].strip() %}
+                        
+                        {% if lineas and lineas|length > 0 %}
+                        <h5><i class="fas fa-list"></i> Servicios y Productos Solicitados</h5>
+                        <div class="table-responsive mb-3">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Tipo</th>
+                                        <th>Descripción</th>
+                                        <th class="text-end">Cantidad</th>
+                                        <th class="text-end">Precio Unit.</th>
+                                        <th class="text-end">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for linea in lineas %}
+                                    <tr>
+                                        <td>
+                                            {% if linea.tipo_item == 'servicio' %}
+                                                <span class="badge bg-primary">Servicio</span>
+                                            {% else %}
+                                                <span class="badge bg-success">Producto</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if linea.tipo_item == 'servicio' %}
+                                                {% set tipo_serv = tipos_servicio.get(linea.item_id|int) %}
+                                                {% if tipo_serv %}
+                                                    <strong>{{ tipo_serv.nombre }}</strong>
+                                                    {% if tipo_serv.descripcion %}<br><small class="text-muted">{{ tipo_serv.descripcion }}</small>{% endif %}
+                                                {% else %}
+                                                    ID: {{ linea.item_id }}
+                                                {% endif %}
+                                            {% else %}
+                                                {% set prod = productos.get(linea.item_id|int) %}
+                                                {% if prod %}
+                                                    <strong>{{ prod.codigo }}</strong> - {{ prod.nombre }}
+                                                {% else %}
+                                                    ID: {{ linea.item_id }}
+                                                {% endif %}
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-end">{{ linea.cantidad }}</td>
+                                        <td class="text-end">Gs. {{ "{:,.0f}".format(linea.precio_unitario|float) }}</td>
+                                        <td class="text-end fw-bold">Gs. {{ "{:,.0f}".format(linea.subtotal|float) }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot class="table-secondary">
+                                    <tr class="fw-bold">
+                                        <td colspan="4" class="text-end">TOTAL:</td>
+                                        <td class="text-end">Gs. {{ "{:,.0f}".format(solicitud.costo_estimado|float) }}</td>
+                                    </tr>
+                                    {% if solicitud.descuento_estimado and solicitud.descuento_estimado > 0 %}
+                                    <tr class="text-success">
+                                        <td colspan="4" class="text-end">Descuento Cliente:</td>
+                                        <td class="text-end">- Gs. {{ "{:,.0f}".format(solicitud.descuento_estimado|float) }}</td>
+                                    </tr>
+                                    <tr class="fw-bold table-success">
+                                        <td colspan="4" class="text-end">TOTAL CON DESCUENTO:</td>
+                                        <td class="text-end">Gs. {{ "{:,.0f}".format(solicitud.total_estimado|float) }}</td>
+                                    </tr>
+                                    {% endif %}
+                                </tfoot>
+                            </table>
+                        </div>
+                        {% endif %}
+                        
+                        {% if obs_usuario %}
+                        <h5><i class="fas fa-sticky-note"></i> Observaciones</h5>
+                        <div class="mb-3 p-3 bg-light rounded">
+                            {{ obs_usuario }}
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <h5><i class="fas fa-sticky-note"></i> Observaciones</h5>
+                        <div class="mb-3 p-3 bg-light rounded">
+                            {{ solicitud.observaciones }}
+                        </div>
+                    {% endif %}
+                {% endif %}
+
+                <hr>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Usuario que Registró:</strong><br>
+                        {{ solicitud.usuario_registro.nombre_completo }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Estado Actual:</strong><br>
+                        {% if solicitud.estado == 'pendiente' %}
+                            <span class="badge bg-warning text-dark">Pendiente</span>
+                        {% elif solicitud.estado == 'presupuestado' %}
+                            <span class="badge bg-info">Presupuestado</span>
+                        {% elif solicitud.estado == 'aprobado' %}
+                            <span class="badge bg-success">Aprobado</span>
+                        {% elif solicitud.estado == 'rechazado' %}
+                            <span class="badge bg-danger">Rechazado</span>
+                        {% elif solicitud.estado == 'cancelado' %}
+                            <span class="badge bg-secondary">Cancelado</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ solicitud.estado|upper }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Presupuestos -->
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-file-invoice-dollar"></i> Presupuestos</span>
+                {% if solicitud.estado == 'pendiente' %}
+                <a href="{{ url_for('servicios.crear_presupuesto', solicitud_id=solicitud.id) }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus"></i> Nuevo Presupuesto
+                </a>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if solicitud.presupuestos.all() %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Número</th>
+                                    <th>Fecha</th>
+                                    <th>Monto Total</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for presupuesto in solicitud.presupuestos.all() %}
+                                <tr>
+                                    <td><strong>{{ presupuesto.numero_presupuesto }}</strong></td>
+                                    <td>{{ presupuesto.fecha_presupuesto.strftime('%d/%m/%Y') }}</td>
+                                    <td>Gs. {{ "{:,.0f}".format(presupuesto.monto_total|float) }}</td>
+                                    <td>
+                                        {% if presupuesto.estado == 'pendiente' %}
+                                            <span class="badge bg-warning text-dark">Pendiente</span>
+                                        {% elif presupuesto.estado == 'aprobado' %}
+                                            <span class="badge bg-success">Aprobado</span>
+                                        {% elif presupuesto.estado == 'rechazado' %}
+                                            <span class="badge bg-danger">Rechazado</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('servicios.ver_presupuesto', id=presupuesto.id) }}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center mb-0">
+                        <i class="fas fa-inbox"></i> No hay presupuestos registrados
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Orden de Servicio -->
+        {% if solicitud.orden_servicio %}
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-tasks"></i> Orden de Servicio
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Número de Orden:</strong><br>
+                        {{ solicitud.orden_servicio.numero_orden }}<br><br>
+                        <strong>Técnico Asignado:</strong><br>
+                        {{ solicitud.orden_servicio.tecnico.nombre_completo }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Fecha de Inicio:</strong><br>
+                        {{ solicitud.orden_servicio.fecha_inicio.strftime('%d/%m/%Y') }}<br><br>
+                        <strong>Estado:</strong><br>
+                        <span class="badge bg-info">{{ solicitud.orden_servicio.estado|upper }}</span>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <a href="{{ url_for('servicios.ver_orden', id=solicitud.orden_servicio.id) }}" class="btn btn-info btn-sm">
+                        <i class="fas fa-eye"></i> Ver Orden
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Panel Lateral -->
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="fas fa-clock"></i> Información General
+            </div>
+            <div class="card-body small">
+                <div class="mb-3">
+                    <strong>ID Solicitud:</strong><br>
+                    {{ solicitud.id }}
+                </div>
+                <div class="mb-3">
+                    <strong>Tipo de Solicitud:</strong><br>
+                    Servicio de Mantenimiento
+                </div>
+                <div>
+                    <strong>Fecha Registro:</strong><br>
+                    {{ solicitud.fecha_solicitud.strftime('%d/%m/%Y') }}
+                </div>
+                <div class="mt-3">
+                    <strong>Prioridad:</strong><br>
+                    {% if solicitud.prioridad == 'baja' %}
+                        <span class="badge bg-success">Baja</span>
+                    {% elif solicitud.prioridad == 'media' %}
+                        <span class="badge bg-warning">Media</span>
+                    {% elif solicitud.prioridad == 'alta' %}
+                        <span class="badge bg-danger">Alta</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ solicitud.prioridad|upper }}</span>
+                    {% endif %}
+                </div>
+                <div class="mt-2">
+                    <strong>Fecha Estimada:</strong><br>
+                    {% if solicitud.fecha_estimada %}
+                        {{ solicitud.fecha_estimada.strftime('%d/%m/%Y') }}
+                    {% else %}
+                        <small class="text-muted">No especificada</small>
+                    {% endif %}
+                </div>
+                <div class="mt-3">
+                    <strong>Costo Estimado (Gs.):</strong><br>
+                    Gs. {{ "{:,.0f}".format(solicitud.costo_estimado|float) }}
+                </div>
+                <div class="mt-2">
+                    <strong>Descuento Cliente (Gs.):</strong><br>
+                    Gs. {{ "{:,.0f}".format(solicitud.descuento_estimado|float) }}
+                </div>
+                <div class="mt-2">
+                    <strong>Total Estimado (Gs.):</strong><br>
+                    Gs. {{ "{:,.0f}".format(solicitud.total_estimado|float) }}
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-actions"></i> Acciones
+            </div>
+            <div class="card-body">
+                {% if solicitud.estado == 'pendiente' %}
+                    <form method="POST" action="{{ url_for('servicios.aprobar_solicitud', id=solicitud.id) }}" class="d-grid gap-2 mb-2">
+                        <button type="submit" class="btn btn-success btn-sm"><i class="fas fa-check"></i> Aprobar (en proceso)</button>
+                    </form>
+                    <form method="POST" action="{{ url_for('servicios.rechazar_solicitud', id=solicitud.id) }}" class="d-grid gap-2 mb-2">
+                        <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-times"></i> Rechazar</button>
+                    </form>
+                {% elif solicitud.estado == 'en_proceso' %}
+                    <form method="POST" action="{{ url_for('servicios.terminar_solicitud', id=solicitud.id) }}" class="d-grid gap-2 mb-2">
+                        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-flag-checkered"></i> Marcar Terminada</button>
+                    </form>
+                {% elif solicitud.estado == 'terminado' %}
+                    <form method="POST" action="{{ url_for('servicios.entregar_solicitud', id=solicitud.id) }}" class="d-grid gap-2 mb-2">
+                        <button type="submit" class="btn btn-info btn-sm"><i class="fas fa-box"></i> Marcar Entregada</button>
+                    </form>
+                {% endif %}
+
+                <a href="{{ url_for('servicios.solicitudes') }}" class="btn btn-secondary btn-sm w-100">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

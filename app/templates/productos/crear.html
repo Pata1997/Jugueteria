@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo Producto{% endblock %}
+{% block page_title %}Nuevo Producto{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-box"></i> Registrar Nuevo Producto
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="codigo" class="form-label">Código *</label>
+                    <input type="text" class="form-control" id="codigo" name="codigo" value="{{ proximo_codigo }}" readonly>
+                    <small class="text-muted">Código autoincrementado</small>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label for="categoria_id" class="form-label">Categoría *</label>
+                    <select class="form-select" id="categoria_id" name="categoria_id" required>
+                        <option value="">Seleccione...</option>
+                        {% for cat in categorias %}
+                        <option value="{{ cat.id }}">{{ cat.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label for="tipo_producto" class="form-label">Tipo *</label>
+                    <select class="form-select" id="tipo_producto" name="tipo_producto" required>
+                        <option value="producto">Producto</option>
+                        <option value="insumo">Insumo</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <label for="nombre" class="form-label">Nombre *</label>
+                    <input type="text" class="form-control" id="nombre" name="nombre" required>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label for="unidad_medida" class="form-label">Unidad de Medida</label>
+                    <select class="form-select" id="unidad_medida" name="unidad_medida">
+                        <option value="unidad">Unidad</option>
+                        <option value="metro">Metro</option>
+                        <option value="kg">Kilogramo</option>
+                        <option value="litro">Litro</option>
+                        <option value="caja">Caja</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="descripcion" class="form-label">Descripción</label>
+                <textarea class="form-control" id="descripcion" name="descripcion" rows="3"></textarea>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label for="precio_compra" class="form-label">Precio Compra (Gs.)</label>
+                    <input type="text" class="form-control" id="precio_compra" name="precio_compra" value="0" inputmode="decimal">
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label for="precio_venta" class="form-label">Precio Venta (Gs.) *</label>
+                    <input type="text" class="form-control" id="precio_venta" name="precio_venta" value="0" inputmode="decimal" required>
+                </div>
+                
+                <div class="col-md-2 mb-3">
+                    <label for="stock_actual" class="form-label">Stock Actual</label>
+                    <input type="number" class="form-control" id="stock_actual" name="stock_actual" value="0" min="0">
+                </div>
+                
+                <div class="col-md-2 mb-3">
+                    <label for="stock_minimo" class="form-label">Stock Mínimo</label>
+                    <input type="number" class="form-control" id="stock_minimo" name="stock_minimo" value="0" min="0">
+                </div>
+                
+                <div class="col-md-2 mb-3">
+                    <label for="stock_maximo" class="form-label">Stock Máximo</label>
+                    <input type="number" class="form-control" id="stock_maximo" name="stock_maximo" value="0" min="0">
+                </div>
+                
+                <div class="col-md-2 mb-3">
+                    <label for="tipo_iva" class="form-label">Tipo IVA *</label>
+                    <select class="form-select" id="tipo_iva" name="tipo_iva" required>
+                        <option value="exenta">Exenta</option>
+                        <option value="5">IVA 5%</option>
+                        <option value="10">IVA 10%</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="es_importado" name="es_importado">
+                <label class="form-check-label" for="es_importado">
+                    Producto Importado
+                </label>
+            </div>
+            
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Guardar
+                </button>
+                <a href="{{ url_for('productos.listar') }}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

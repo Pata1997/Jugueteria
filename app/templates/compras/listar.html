@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}Compras{% endblock %}
+{% block page_title %}Gestión de Compras{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h5>
+                <i class="fas fa-shopping-cart"></i> Registro de Compras
+            </h5>
+            <a href="{{ url_for('compras.crear_compra') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nueva Compra
+            </a>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <form method="GET" class="row g-2">
+                    <div class="col-md-3">
+                        <input type="text" name="search" class="form-control form-control-sm" 
+                               placeholder="Buscar por número..." value="{{ request.args.get('search', '') }}">
+                    </div>
+                    <div class="col-md-3">
+                        <select name="estado" class="form-select form-select-sm">
+                            <option value="">Todos los estados</option>
+                            <option value="recibida" {% if request.args.get('estado') == 'recibida' %}selected{% endif %}>Recibida</option>
+                            <option value="verificada" {% if request.args.get('estado') == 'verificada' %}selected{% endif %}>Verificada</option>
+                            <option value="completada" {% if request.args.get('estado') == 'completada' %}selected{% endif %}>Completada</option>
+                            <option value="con_problemas" {% if request.args.get('estado') == 'con_problemas' %}selected{% endif %}>Con Problemas</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select name="tipo_pago" class="form-select form-select-sm">
+                            <option value="">Todos los tipos</option>
+                            <option value="contado" {% if request.args.get('tipo_pago') == 'contado' %}selected{% endif %}>Contado</option>
+                            <option value="credito" {% if request.args.get('tipo_pago') == 'credito' %}selected{% endif %}>Crédito</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-outline-secondary w-100">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card-body p-0">
+                {% if compras.items %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Número Compra</th>
+                                    <th>Factura</th>
+                                    <th>Proveedor</th>
+                                    <th>Fecha Compra</th>
+                                    <th class="text-end">Total</th>
+                                    <th>Estado</th>
+                                    <th>Tipo Pago</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for compra in compras.items %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ compra.numero_compra }}</strong>
+                                    </td>
+                                    <td>
+                                        {% if compra.numero_factura %}
+                                            <small>{{ compra.numero_factura }}</small>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>{{ compra.proveedor.razon_social }}</small>
+                                    </td>
+                                    <td>
+                                        <small>{{ compra.fecha_compra.strftime('%d/%m/%Y %H:%M') }}</small>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong>Gs. {{ "{:,.0f}".format(compra.total) }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if compra.estado == 'recibida' %}bg-info
+                                            {% elif compra.estado == 'verificada' %}bg-warning
+                                            {% elif compra.estado == 'completada' %}bg-success
+                                            {% else %}bg-danger{% endif %}">
+                                            {{ compra.estado|capitalize }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if compra.tipo_pago == 'contado' %}
+                                            <span class="badge bg-success">Contado</span>
+                                        {% elif compra.tipo_pago == 'credito' %}
+                                            <span class="badge bg-warning">
+                                                Crédito ({{ compra.dias_credito }}d)
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('compras.ver', id=compra.id) }}" 
+                                               class="btn btn-outline-primary" title="Ver detalle">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- PAGINACIÓN -->
+                    {% if compras.pages > 1 %}
+                    <nav class="d-flex justify-content-between align-items-center p-3">
+                        <small class="text-muted">
+                            Mostrando {{ compras.items|length }} de {{ compras.total }} resultados
+                        </small>
+                        <ul class="pagination mb-0">
+                            <li class="page-item {% if not compras.has_prev %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('compras.listar', page=1, **request.args) }}">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item {% if not compras.has_prev %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('compras.listar', page=compras.prev_num, **request.args) if compras.has_prev else '#' }}">
+                                    <i class="fas fa-angle-left"></i>
+                                </a>
+                            </li>
+
+                            {% for page_num in compras.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                                {% if page_num %}
+                                    <li class="page-item {% if page_num == compras.page %}active{% endif %}">
+                                        <a class="page-link" href="{{ url_for('compras.listar', page=page_num, **request.args) }}">
+                                            {{ page_num }}
+                                        </a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            <li class="page-item {% if not compras.has_next %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('compras.listar', page=compras.next_num, **request.args) if compras.has_next else '#' }}">
+                                    <i class="fas fa-angle-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item {% if not compras.has_next %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('compras.listar', page=compras.pages, **request.args) }}">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    {% endif %}
+
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No hay compras registradas</p>
+                        <a href="{{ url_for('compras.crear_compra') }}" class="btn btn-primary mt-3">
+                            <i class="fas fa-plus"></i> Crear Primera Compra
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- RESUMEN (Si hay compras) -->
+{% if compras.items %}
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Total Compras</h6>
+                <h4>{{ compras.total }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Monto Total</h6>
+                <h4>Gs. {{ "{:,.0f}".format(compras.items|map(attribute='total')|sum) }}</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Pendientes Pago</h6>
+                <h4>
+                    {% set pendientes = compras.items|selectattr('tipo_pago', 'equalto', 'credito')|list|length %}
+                    {{ pendientes }}
+                </h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-light">
+            <div class="card-body text-center">
+                <h6 class="text-muted">Por Verificar</h6>
+                <h4>
+                    {% set por_verificar = compras.items|selectattr('estado', 'equalto', 'recibida')|list|length %}
+                    {{ por_verificar }}
+                </h4>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

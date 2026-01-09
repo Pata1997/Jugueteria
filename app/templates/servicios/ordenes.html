@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Órdenesde Servicio{% endblock %}
+{% block page_title %}Órdenes de Servicio{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <i class="fas fa-clipboard-list"></i> Órdenes de Servicio
+    </div>
+    <div class="card-body">
+        <!-- Filtros -->
+        <form method="GET" class="mb-3">
+            <div class="row g-2">
+                <div class="col-md-3">
+                    <select class="form-select" name="estado">
+                        <option value="">Todos los Estados</option>
+                        <option value="pendiente" {% if request.args.get('estado') == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                        <option value="en_proceso" {% if request.args.get('estado') == 'en_proceso' %}selected{% endif %}>En Proceso</option>
+                        <option value="completado" {% if request.args.get('estado') == 'completado' %}selected{% endif %}>Completado</option>
+                        <option value="entregado" {% if request.args.get('estado') == 'entregado' %}selected{% endif %}>Entregado</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" name="tecnico">
+                        <option value="">Todos los Técnicos</option>
+                        {% for tecnico in tecnicos %}
+                        <option value="{{ tecnico.id }}" {% if request.args.get('tecnico') == tecnico.id|string %}selected{% endif %}>
+                            {{ tecnico.nombre_completo }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <input type="text" class="form-control" name="cliente" value="{{ request.args.get('cliente', '') }}" placeholder="Cliente">
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-secondary w-100">
+                        <i class="fas fa-search"></i> Filtrar
+                    </button>
+                </div>
+            </div>
+        </form>
+        
+        <!-- Tabla -->
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nº Orden</th>
+                        <th>Solicitud</th>
+                        <th>Cliente</th>
+                        <th>Técnico</th>
+                        <th>Fecha Inicio</th>
+                        <th>Fecha Entrega</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for orden in ordenes.items %}
+                    <tr>
+                        <td><strong>{{ orden.nro_orden }}</strong></td>
+                        <td>
+                            <a href="{{ url_for('servicios.ver_solicitud', id=orden.solicitud.id) }}">
+                                #{{ orden.solicitud.id }}
+                            </a>
+                        </td>
+                        <td>{{ orden.solicitud.cliente.nombre_completo }}</td>
+                        <td>
+                            {% if orden.tecnico %}
+                                {{ orden.tecnico.nombre_completo }}
+                            {% else %}
+                                <span class="text-muted">Sin asignar</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ orden.fecha_inicio.strftime('%d/%m/%Y') if orden.fecha_inicio else '-' }}</td>
+                        <td>{{ orden.fecha_entrega_estimada.strftime('%d/%m/%Y') if orden.fecha_entrega_estimada else '-' }}</td>
+                        <td>
+                            {% if orden.estado == 'pendiente' %}
+                                <span class="badge bg-warning">Pendiente</span>
+                            {% elif orden.estado == 'en_proceso' %}
+                                <span class="badge bg-primary">En Proceso</span>
+                            {% elif orden.estado == 'completado' %}
+                                <span class="badge bg-success">Completado</span>
+                            {% elif orden.estado == 'entregado' %}
+                                <span class="badge bg-secondary">Entregado</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('servicios.ver_orden', id=orden.id) }}" class="btn btn-sm btn-info">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            {% if orden.estado == 'pendiente' %}
+                            <button class="btn btn-sm btn-success" onclick="iniciarOrden({{ orden.id }})">
+                                <i class="fas fa-play"></i>
+                            </button>
+                            {% endif %}
+                            {% if orden.estado == 'completado' and not orden.venta %}
+                            <a href="{{ url_for('ventas.crear', orden_id=orden.id) }}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-file-invoice-dollar"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center">No hay órdenes de servicio</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Paginación -->
+        {% if ordenes.pages > 1 %}
+        <nav>
+            <ul class="pagination justify-content-center">
+                {% for num in ordenes.iter_pages() %}
+                    {% if num %}
+                        <li class="page-item {% if num == ordenes.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('servicios.ordenes', page=num, **request.args) }}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Estadísticas -->
+<div class="row mt-3">
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5>Pendientes</h5>
+                <h2>{{ estadisticas.pendientes }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5>En Proceso</h5>
+                <h2>{{ estadisticas.en_proceso }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5>Completadas</h5>
+                <h2>{{ estadisticas.completadas }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-secondary">
+            <div class="card-body">
+                <h5>Entregadas</h5>
+                <h2>{{ estadisticas.entregadas }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function iniciarOrden(ordenId) {
+    if (confirm('¿Iniciar trabajo en esta orden?')) {
+        $.post('{{ url_for("servicios.iniciar_orden") }}', {orden_id: ordenId})
+            .done(function() {
+                location.reload();
+            })
+            .fail(function(xhr) {
+                alert('Error: ' + xhr.responseJSON.error);
+            });
+    }
+}
+</script>
+{% endblock %}

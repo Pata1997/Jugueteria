@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+
+{% block title %}Configuración{% endblock %}
+{% block page_title %}Configuración del Sistema{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <!-- Menú Lateral -->
+        <div class="list-group">
+            <a href="#empresa" class="list-group-item list-group-item-action active" data-bs-toggle="list">
+                <i class="fas fa-building"></i> Datos de la Empresa
+            </a>
+            <a href="#usuarios" class="list-group-item list-group-item-action" data-bs-toggle="list">
+                <i class="fas fa-users"></i> Usuarios
+            </a>
+            <a href="#facturacion" class="list-group-item list-group-item-action" data-bs-toggle="list">
+                <i class="fas fa-file-invoice"></i> Facturación
+            </a>
+            <a href="#backup" class="list-group-item list-group-item-action" data-bs-toggle="list">
+                <i class="fas fa-database"></i> Respaldo de Datos
+            </a>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="tab-content">
+            <!-- Datos de la Empresa -->
+            <div class="tab-pane fade show active" id="empresa">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-building"></i> Datos de la Empresa
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('configuracion.actualizar_empresa') }}" enctype="multipart/form-data">
+                            <div class="row mb-3">
+                                <div class="col-md-8">
+                                    <label class="form-label">Nombre de la Empresa *</label>
+                                    <input type="text" class="form-control" name="nombre_empresa" 
+                                           value="{{ config.nombre_empresa }}" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">RUC *</label>
+                                    <input type="text" class="form-control" name="ruc" 
+                                           value="{{ config.ruc }}" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Logo de la Empresa</label>
+                                <input type="file" class="form-control" name="logo" accept="image/*" id="logoInput">
+                                <small class="text-muted">Este logo se mostrará en el login, dashboard, reportes y tickets de facturación</small>
+                                {% if config.logo_url %}
+                                <div class="mt-2">
+                                    <img src="{{ url_for('static', filename=config.logo_url) }}" alt="Logo" style="max-height: 100px;">
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Dirección</label>
+                                <input type="text" class="form-control" name="direccion" 
+                                       value="{{ config.direccion or '' }}">
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Teléfono</label>
+                                    <input type="text" class="form-control" name="telefono" 
+                                           value="{{ config.telefono or '' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Email</label>
+                                    <input type="email" class="form-control" name="email" 
+                                           value="{{ config.email or '' }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Sitio Web</label>
+                                    <input type="text" class="form-control" name="sitio_web" 
+                                           value="{{ config.sitio_web or '' }}">
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            <h6 class="mb-3"><i class="fas fa-file-invoice"></i> Configuración de Facturación</h6>
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> 
+                                <strong>Timbrado:</strong> Número de autorización de la SET que habilita un rango de facturas.
+                                Las facturas se generarán automáticamente dentro del rango autorizado.
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Timbrado Actual *</label>
+                                    <input type="text" class="form-control" name="timbrado" 
+                                           value="{{ config.timbrado or '' }}" required>
+                                    <small class="text-muted">Número de timbrado de la SET</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Fecha Vencimiento Timbrado</label>
+                                    <input type="date" class="form-control" name="fecha_vencimiento_timbrado" 
+                                           value="{{ config.fecha_vencimiento_timbrado.strftime('%Y-%m-%d') if config.fecha_vencimiento_timbrado else '' }}">
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Desde Factura Nº *</label>
+                                    <input type="text" class="form-control" name="numero_factura_desde" 
+                                           value="{{ config.numero_factura_desde or '1' }}" required>
+                                    <small class="text-muted">Rango inicial autorizado</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Hasta Factura Nº *</label>
+                                    <input type="text" class="form-control" name="numero_factura_hasta" 
+                                           value="{{ config.numero_factura_hasta or '99999' }}" required>
+                                    <small class="text-muted">Rango final autorizado</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Factura Actual</label>
+                                    <input type="text" class="form-control" value="{{ config.numero_factura_actual or '1' }}" readonly>
+                                    <small class="text-muted">Próxima factura a generar</small>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Establecimiento</label>
+                                    <input type="text" class="form-control" name="numero_establecimiento" 
+                                           value="{{ config.numero_establecimiento or '001' }}" maxlength="3">
+                                    <small class="text-muted">Código de sucursal: 001, 002, etc.</small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Punto de Expedición</label>
+                                    <input type="text" class="form-control" name="numero_expedicion" 
+                                           value="{{ config.numero_expedicion or '001' }}" maxlength="3">
+                                    <small class="text-muted">Punto de venta: 001, 002, etc.</small>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Guardar Cambios
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Usuarios -->
+            <div class="tab-pane fade" id="usuarios">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="row align-items-center">
+                            <div class="col">
+                                <i class="fas fa-users"></i> Gestión de Usuarios
+                            </div>
+                            <div class="col-auto">
+                                <a href="{{ url_for('configuracion.crear_usuario') }}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> Nuevo Usuario
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Usuario</th>
+                                        <th>Nombre</th>
+                                        <th>Rol</th>
+                                        <th>Email</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for usuario in usuarios %}
+                                    <tr>
+                                        <td>{{ usuario.username }}</td>
+                                        <td>{{ usuario.nombre_completo }}</td>
+                                        <td>
+                                            {% if usuario.rol == 'admin' %}
+                                                <span class="badge bg-danger">Admin</span>
+                                            {% elif usuario.rol == 'vendedor' %}
+                                                <span class="badge bg-primary">Vendedor</span>
+                                            {% elif usuario.rol == 'cajero' %}
+                                                <span class="badge bg-success">Cajero</span>
+                                            {% elif usuario.rol == 'tecnico' %}
+                                                <span class="badge bg-info">Técnico</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ usuario.email or '-' }}</td>
+                                        <td>
+                                            {% if usuario.activo %}
+                                                <span class="badge bg-success">Activo</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Inactivo</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('configuracion.editar_usuario', id=usuario.id) }}" class="btn btn-sm btn-warning">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            {% if usuario.id != current_user.id %}
+                                            <button class="btn btn-sm btn-danger" onclick="eliminarUsuario({{ usuario.id }})">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Facturación -->
+            <div class="tab-pane fade" id="facturacion">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-file-invoice"></i> Configuración de Facturación
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> 
+                            <strong>Nota:</strong> Cada producto tiene su propio tipo de IVA (10%, 5% o Exenta).
+                            Las facturas calcularán automáticamente los subtotales por tipo de IVA.
+                        </div>
+                        
+                        <form method="POST" action="{{ url_for('configuracion.actualizar_facturacion') }}">
+                            <div class="mb-3">
+                                <label class="form-label">Formato de Factura</label>
+                                <select class="form-select" name="formato_factura">
+                                    <option value="ticket">Ticket (80mm)</option>
+                                    <option value="a4">A4</option>
+                                    <option value="media_carta">Media Carta</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" name="imprimir_automatico" checked>
+                                    <label class="form-check-label">Imprimir automáticamente después de registrar venta</label>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" name="enviar_email">
+                                    <label class="form-check-label">Enviar factura por email automáticamente</label>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Guardar Configuración
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Respaldo -->
+            <div class="tab-pane fade" id="backup">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-database"></i> Respaldo de Datos
+                    </div>
+                    <div class="card-body">
+                        <p class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> 
+                            Es recomendable realizar respaldos periódicos de la base de datos.
+                        </p>
+                        
+                        <button class="btn btn-success mb-3" onclick="realizarBackup()">
+                            <i class="fas fa-download"></i> Realizar Respaldo Ahora
+                        </button>
+                        
+                        <hr>
+                        
+                        <h6>Restaurar Respaldo</h6>
+                        <form method="POST" action="{{ url_for('configuracion.restaurar_backup') }}" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <input type="file" class="form-control" name="archivo_backup" accept=".sql,.backup">
+                            </div>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-upload"></i> Restaurar desde Archivo
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function eliminarUsuario(userId) {
+    if (confirm('¿Está seguro de eliminar este usuario?')) {
+        $.post('{{ url_for("configuracion.eliminar_usuario") }}', {user_id: userId})
+            .done(function() {
+                location.reload();
+            })
+            .fail(function(xhr) {
+                alert('Error: ' + xhr.responseJSON.error);
+            });
+    }
+}
+
+function realizarBackup() {
+    window.location.href = '{{ url_for("configuracion.realizar_backup") }}';
+}
+</script>
+{% endblock %}

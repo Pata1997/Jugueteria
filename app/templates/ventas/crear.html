@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+
+{% block title %}Nueva Venta{% endblock %}
+{% block page_title %}Punto de Venta{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-item {
+        cursor: pointer;
+        padding: 10px;
+        border: 1px solid #ddd;
+        margin-bottom: 5px;
+        border-radius: 5px;
+    }
+    .product-item:hover {
+        background: #f8f9fa;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="POST" id="formVenta">
+    <div class="row">
+        <!-- Columna Izquierda - Detalles -->
+        <div class="col-md-8">
+            <div class="card mb-3">
+                <div class="card-header">
+                    <i class="fas fa-shopping-cart"></i> Detalles de la Venta
+                </div>
+                <div class="card-body">
+                    <!-- Cliente -->
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Cliente *</label>
+                            <input type="text" class="form-control" id="buscar_cliente" placeholder="Buscar cliente por nombre o documento...">
+                            <input type="hidden" name="cliente_id" id="cliente_id" required>
+                            <div id="cliente_info" class="mt-2"></div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Tipo de Venta</label>
+                            <select class="form-select" name="tipo_venta" id="tipo_venta">
+                                <option value="producto">Producto</option>
+                                <option value="servicio">Servicio</option>
+                                <option value="mixta">Mixta</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Agregar Productos -->
+                    <div class="mb-3">
+                        <label class="form-label">Buscar Producto</label>
+                        <input type="text" class="form-control" id="buscar_producto" placeholder="Buscar por código o nombre...">
+                    </div>
+                    
+                    <!-- Tabla de productos -->
+                    <div class="table-responsive">
+                        <table class="table" id="tabla_detalles">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th width="100">Cantidad</th>
+                                    <th width="120">P. Unit.</th>
+                                    <th width="100">Desc.</th>
+                                    <th width="120">Subtotal</th>
+                                    <th width="50"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="detalles_body">
+                                <!-- Se llenan con JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Formas de Pago -->
+            <div class="card">
+                <div class="card-header">
+                    <i class="fas fa-money-bill"></i> Formas de Pago
+                </div>
+                <div class="card-body">
+                    <button type="button" class="btn btn-success btn-sm mb-2" onclick="agregarPago()">
+                        <i class="fas fa-plus"></i> Agregar Pago
+                    </button>
+                    
+                    <div id="pagos_container">
+                        <!-- Se llenan con JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Columna Derecha - Totales -->
+        <div class="col-md-4">
+            <div class="card mb-3" style="position: sticky; top: 20px;">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-calculator"></i> Totales
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Subtotal</label>
+                        <input type="text" class="form-control form-control-lg" id="subtotal_display" value="Gs. 0" readonly>
+                        <input type="hidden" name="subtotal" id="subtotal" value="0">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Descuento</label>
+                        <input type="number" class="form-control" name="descuento" id="descuento" value="0" min="0" onchange="calcularTotales()">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">IVA 10%</label>
+                        <input type="text" class="form-control" id="iva_display" value="Gs. 0" readonly>
+                        <input type="hidden" name="iva" id="iva" value="0">
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="mb-3">
+                        <label class="form-label"><strong>TOTAL</strong></label>
+                        <input type="text" class="form-control form-control-lg text-success fw-bold" id="total_display" value="Gs. 0" readonly style="font-size: 2rem;">
+                        <input type="hidden" name="total" id="total" value="0">
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Días de Crédito</label>
+                        <input type="number" class="form-control" name="dias_credito" id="dias_credito" value="0" min="0" max="30">
+                        <small class="text-muted">0 = Contado</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Observaciones</label>
+                        <textarea class="form-control" name="observaciones" rows="2"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success w-100 btn-lg">
+                        <i class="fas fa-check"></i> REGISTRAR VENTA
+                    </button>
+                    
+                    <a href="{{ url_for('ventas.listar') }}" class="btn btn-secondary w-100 mt-2">
+                        <i class="fas fa-times"></i> Cancelar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <input type="hidden" name="detalles_json" id="detalles_json">
+    <input type="hidden" name="pagos_json" id="pagos_json">
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let detalles = [];
+let pagos = [];
+let contador_detalle = 0;
+let contador_pago = 0;
+
+$(document).ready(function() {
+    // Autocompletar cliente
+    $('#buscar_cliente').autocomplete({
+        source: '{{ url_for("clientes.buscar") }}',
+        minLength: 2,
+        select: function(event, ui) {
+            $('#cliente_id').val(ui.item.id);
+            $('#cliente_info').html(`
+                <strong>${ui.item.label}</strong><br>
+                <small>Límite crédito: Gs. ${ui.item.limite_credito.toLocaleString()}</small>
+            `);
+        }
+    });
+    
+    // Autocompletar producto
+    $('#buscar_producto').autocomplete({
+        source: '{{ url_for("productos.buscar") }}',
+        minLength: 2,
+        select: function(event, ui) {
+            agregarDetalle(ui.item);
+            $(this).val('');
+            return false;
+        }
+    });
+});
+
+function agregarDetalle(producto) {
+    contador_detalle++;
+    
+    const detalle = {
+        id: contador_detalle,
+        producto_id: producto.id,
+        tipo_item: 'producto',
+        descripcion: producto.label,
+        cantidad: 1,
+        precio_unitario: producto.precio_venta,
+        subtotal: producto.precio_venta,
+        descuento: 0,
+        total: producto.precio_venta
+    };
+    
+    detalles.push(detalle);
+    renderizarDetalles();
+    calcularTotales();
+}
+
+function renderizarDetalles() {
+    const tbody = $('#detalles_body');
+    tbody.empty();
+    
+    detalles.forEach(det => {
+        tbody.append(`
+            <tr>
+                <td>${det.descripcion}</td>
+                <td>
+                    <input type="number" class="form-control form-control-sm" value="${det.cantidad}" 
+                           min="1" onchange="actualizarCantidad(${det.id}, this.value)">
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm" value="${det.precio_unitario}" 
+                           min="0" onchange="actualizarPrecio(${det.id}, this.value)">
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm" value="${det.descuento}" 
+                           min="0" onchange="actualizarDescuento(${det.id}, this.value)">
+                </td>
+                <td class="text-end">Gs. ${det.total.toLocaleString()}</td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="eliminarDetalle(${det.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `);
+    });
+}
+
+function actualizarCantidad(id, cantidad) {
+    const detalle = detalles.find(d => d.id === id);
+    if (detalle) {
+        detalle.cantidad = parseFloat(cantidad);
+        detalle.subtotal = detalle.cantidad * detalle.precio_unitario;
+        detalle.total = detalle.subtotal - detalle.descuento;
+        renderizarDetalles();
+        calcularTotales();
+    }
+}
+
+function actualizarPrecio(id, precio) {
+    const detalle = detalles.find(d => d.id === id);
+    if (detalle) {
+        detalle.precio_unitario = parseFloat(precio);
+        detalle.subtotal = detalle.cantidad * detalle.precio_unitario;
+        detalle.total = detalle.subtotal - detalle.descuento;
+        renderizarDetalles();
+        calcularTotales();
+    }
+}
+
+function actualizarDescuento(id, descuento) {
+    const detalle = detalles.find(d => d.id === id);
+    if (detalle) {
+        detalle.descuento = parseFloat(descuento);
+        detalle.total = detalle.subtotal - detalle.descuento;
+        renderizarDetalles();
+        calcularTotales();
+    }
+}
+
+function eliminarDetalle(id) {
+    detalles = detalles.filter(d => d.id !== id);
+    renderizarDetalles();
+    calcularTotales();
+}
+
+function calcularTotales() {
+    const subtotal = detalles.reduce((sum, d) => sum + d.total, 0);
+    const descuento_general = parseFloat($('#descuento').val()) || 0;
+    const base_imponible = subtotal - descuento_general;
+    const iva = base_imponible * 0.10;
+    const total = base_imponible + iva;
+    
+    $('#subtotal').val(subtotal.toFixed(2));
+    $('#subtotal_display').val('Gs. ' + subtotal.toLocaleString());
+    $('#iva').val(iva.toFixed(2));
+    $('#iva_display').val('Gs. ' + iva.toLocaleString());
+    $('#total').val(total.toFixed(2));
+    $('#total_display').val('Gs. ' + total.toLocaleString());
+}
+
+function agregarPago() {
+    contador_pago++;
+    
+    pagos.push({
+        id: contador_pago,
+        forma_pago: 'efectivo',
+        monto: 0,
+        referencia: '',
+        banco: ''
+    });
+    
+    renderizarPagos();
+}
+
+function renderizarPagos() {
+    const container = $('#pagos_container');
+    container.empty();
+    
+    pagos.forEach(pago => {
+        container.append(`
+            <div class="card mb-2">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <select class="form-select form-select-sm" onchange="actualizarFormaPago(${pago.id}, this.value)">
+                                <option value="efectivo" ${pago.forma_pago === 'efectivo' ? 'selected' : ''}>Efectivo</option>
+                                <option value="tarjeta_credito" ${pago.forma_pago === 'tarjeta_credito' ? 'selected' : ''}>Tarjeta Crédito</option>
+                                <option value="tarjeta_debito" ${pago.forma_pago === 'tarjeta_debito' ? 'selected' : ''}>Tarjeta Débito</option>
+                                <option value="cheque" ${pago.forma_pago === 'cheque' ? 'selected' : ''}>Cheque</option>
+                                <option value="transferencia" ${pago.forma_pago === 'transferencia' ? 'selected' : ''}>Transferencia</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="number" class="form-control form-control-sm" placeholder="Monto" 
+                                   value="${pago.monto}" onchange="actualizarMontoPago(${pago.id}, this.value)">
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" class="form-control form-control-sm" placeholder="Referencia" 
+                                   value="${pago.referencia}" onchange="actualizarReferencia(${pago.id}, this.value)">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" class="btn btn-sm btn-danger w-100" onclick="eliminarPago(${pago.id})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `);
+    });
+}
+
+function actualizarFormaPago(id, forma) {
+    const pago = pagos.find(p => p.id === id);
+    if (pago) pago.forma_pago = forma;
+}
+
+function actualizarMontoPago(id, monto) {
+    const pago = pagos.find(p => p.id === id);
+    if (pago) pago.monto = parseFloat(monto);
+}
+
+function actualizarReferencia(id, ref) {
+    const pago = pagos.find(p => p.id === id);
+    if (pago) pago.referencia = ref;
+}
+
+function eliminarPago(id) {
+    pagos = pagos.filter(p => p.id !== id);
+    renderizarPagos();
+}
+
+// Al enviar el formulario
+$('#formVenta').submit(function(e) {
+    if (detalles.length === 0) {
+        e.preventDefault();
+        alert('Debe agregar al menos un producto');
+        return false;
+    }
+    
+    if (pagos.length === 0) {
+        e.preventDefault();
+        alert('Debe agregar al menos una forma de pago');
+        return false;
+    }
+    
+    $('#detalles_json').val(JSON.stringify(detalles));
+    $('#pagos_json').val(JSON.stringify(pagos));
+    
+    return true;
+});
+
+// Agregar primer pago automáticamente
+agregarPago();
+</script>
+{% endblock %}

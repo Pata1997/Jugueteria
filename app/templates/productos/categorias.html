@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Categorías{% endblock %}
+{% block page_title %}Categorías de Productos{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-plus"></i> Nueva Categoría
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('productos.crear_categoria') }}">
+                    <div class="mb-3">
+                        <label for="codigo" class="form-label">Código *</label>
+                        <input type="text" class="form-control" id="codigo" name="codigo" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="nombre" class="form-label">Nombre *</label>
+                        <input type="text" class="form-control" id="nombre" name="nombre" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="descripcion" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="descripcion" name="descripcion" rows="3"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-save"></i> Guardar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-tags"></i> Lista de Categorías
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Descripción</th>
+                                <th>Productos</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cat in categorias %}
+                            <tr>
+                                <td>{{ cat.codigo }}</td>
+                                <td><strong>{{ cat.nombre }}</strong></td>
+                                <td>{{ cat.descripcion or '-' }}</td>
+                                <td>
+                                    <span class="badge bg-info">{{ cat.productos.count() }}</span>
+                                </td>
+                                <td>
+                                    {% if cat.activo %}
+                                    <span class="badge bg-success">Activa</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Inactiva</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

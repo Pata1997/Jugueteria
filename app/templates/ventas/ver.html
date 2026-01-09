@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block title %}Venta #{{ venta.numero_factura }}{% endblock %}
+{% block page_title %}Detalle de Venta{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Columna Principal -->
+    <div class="col-md-8">
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-file-invoice"></i> Factura #{{ venta.numero_factura }}
+            </div>
+            <div class="card-body">
+                <!-- Información General -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p><strong>Fecha:</strong> {{ venta.fecha_venta.strftime('%d/%m/%Y %H:%M') }}</p>
+                        <p><strong>Cliente:</strong> {{ venta.cliente.nombre_completo if venta.cliente else 'Cliente Final' }}</p>
+                        <p><strong>Tipo Venta:</strong> 
+                            <span class="badge bg-info">{{ venta.tipo_venta|upper }}</span>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Cajero:</strong> {{ venta.vendedor.nombre_completo if venta.vendedor else '' }}</p>
+                        <p><strong>Estado Pago:</strong>
+                            {% if venta.estado_pago == 'pagado' %}
+                                <span class="badge bg-success">Pagado</span>
+                            {% elif venta.estado_pago == 'pendiente' %}
+                                <span class="badge bg-danger">Pendiente</span>
+                            {% else %}
+                                <span class="badge bg-warning">Parcial</span>
+                            {% endif %}
+                        </p>
+                        {% if venta.dias_credito > 0 %}
+                        <p><strong>Vencimiento:</strong> {{ venta.fecha_vencimiento.strftime('%d/%m/%Y') }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Detalles de Productos -->
+                <h6 class="mb-3">Detalle de Productos/Servicios</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Descripción</th>
+                                <th width="80">Cant.</th>
+                                <th width="120">P. Unit.</th>
+                                <th width="100">Desc.</th>
+                                <th width="120">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for detalle in venta.detalles %}
+                            <tr>
+                                <td>
+                                    {{ detalle.descripcion }}
+                                    {% if detalle.producto %}
+                                    <br><small class="text-muted">Código: {{ detalle.producto.codigo }}</small>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">{{ detalle.cantidad }}</td>
+                                <td class="text-end">Gs. {{ "{:,.0f}".format(detalle.precio_unitario) }}</td>
+                                <td class="text-end">Gs. {{ "{:,.0f}".format(detalle.descuento) }}</td>
+                                <td class="text-end">Gs. {{ "{:,.0f}".format(detalle.total) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-secondary">
+                            <tr>
+                                <td colspan="4" class="text-end"><strong>Subtotal:</strong></td>
+                                <td class="text-end">Gs. {{ "{:,.0f}".format(venta.subtotal) }}</td>
+                            </tr>
+                            {% if venta.descuento > 0 %}
+                            <tr>
+                                <td colspan="4" class="text-end"><strong>Descuento:</strong></td>
+                                <td class="text-end text-danger">- Gs. {{ "{:,.0f}".format(venta.descuento) }}</td>
+                            </tr>
+                            {% endif %}
+                            {% if desglose_iva %}
+                                {% if desglose_iva['iva_10']|float > 0 %}
+                                <tr>
+                                    <td colspan="4" class="text-end"><strong>IVA 10%:</strong></td>
+                                    <td class="text-end">Gs. {{ "{:,.0f}".format(desglose_iva['iva_10']|float) }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if desglose_iva['iva_5']|float > 0 %}
+                                <tr>
+                                    <td colspan="4" class="text-end"><strong>IVA 5%:</strong></td>
+                                    <td class="text-end">Gs. {{ "{:,.0f}".format(desglose_iva['iva_5']|float) }}</td>
+                                </tr>
+                                {% endif %}
+                                {% if desglose_iva['exentas']|float > 0 %}
+                                <tr>
+                                    <td colspan="4" class="text-end"><strong>Exentas:</strong></td>
+                                    <td class="text-end">Gs. {{ "{:,.0f}".format(desglose_iva['exentas']|float) }}</td>
+                                </tr>
+                                {% endif %}
+                            {% else %}
+                                {% if venta.iva > 0 %}
+                                <tr>
+                                    <td colspan="4" class="text-end"><strong>IVA:</strong></td>
+                                    <td class="text-end">Gs. {{ "{:,.0f}".format(venta.iva) }}</td>
+                                </tr>
+                                {% endif %}
+                            {% endif %}
+                            <tr class="fw-bold">
+                                <td colspan="4" class="text-end"><strong>TOTAL:</strong></td>
+                                <td class="text-end">Gs. {{ "{:,.0f}".format(venta.total) }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
+                {% if venta.observaciones %}
+                <div class="alert alert-info mt-3">
+                    <strong>Observaciones:</strong> {{ venta.observaciones }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Historial de Pagos -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-money-bill-wave"></i> Historial de Pagos
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Forma de Pago</th>
+                                <th>Monto</th>
+                                <th>Referencia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pago in venta.pagos %}
+                            <tr>
+                                <td>{{ pago.fecha_pago.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>{{ pago.forma_pago.nombre if pago.forma_pago else '-' }}</td>
+                                <td class="text-end">Gs. {{ "{:,.0f}".format(pago.monto) }}</td>
+                                <td>{{ pago.referencia or '-' }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center">No hay pagos registrados</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Columna Lateral -->
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i> Resumen de Pagos
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Total Factura:</span>
+                    <strong>Gs. {{ "{:,.0f}".format(venta.total) }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Total Pagado:</span>
+                    <strong class="text-success">Gs. {{ "{:,.0f}".format(venta.monto_pagado) }}</strong>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <span><strong>Saldo Pendiente:</strong></span>
+                    <strong class="text-{% if venta.saldo_pendiente > 0 %}danger{% else %}success{% endif %}">
+                        Gs. {{ "{:,.0f}".format(venta.saldo_pendiente) }}
+                    </strong>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Acciones -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-cogs"></i> Acciones
+            </div>
+            <div class="card-body">
+                {% if venta.saldo_pendiente > 0 %}
+                <button class="btn btn-success w-100 mb-2" data-bs-toggle="modal" data-bs-target="#modalPago">
+                    <i class="fas fa-dollar-sign"></i> Registrar Pago
+                </button>
+                {% endif %}
+                
+                {% if current_user.rol == 'admin' %}
+                <button class="btn btn-warning w-100 mb-2" data-bs-toggle="modal" data-bs-target="#modalNotaCredito">
+                    <i class="fas fa-file-alt"></i> Nota de Crédito
+                </button>
+                
+                <button class="btn btn-danger w-100" onclick="if(confirm('¿Anular esta venta?')) window.location.href='{{ url_for('ventas.anular', id=venta.id) }}'">
+                    <i class="fas fa-ban"></i> Anular Venta
+                </button>
+                {% endif %}
+                
+                <hr>
+                
+                <a href="{{ url_for('ventas.listar') }}" class="btn btn-outline-secondary w-100">
+                    <i class="fas fa-arrow-left"></i> Volver al Listado
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Registrar Pago -->
+<div class="modal fade" id="modalPago" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Registrar Pago</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('ventas.registrar_pago') }}">
+                <div class="modal-body">
+                    <input type="hidden" name="venta_id" value="{{ venta.id }}">
+                    
+                    <div class="alert alert-info">
+                        Saldo pendiente: <strong>Gs. {{ "{:,.0f}".format(venta.saldo_pendiente) }}</strong>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Monto a Pagar *</label>
+                        <input type="number" class="form-control" name="monto" required 
+                               min="1" max="{{ venta.saldo_pendiente }}" 
+                               value="{{ venta.saldo_pendiente }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Forma de Pago *</label>
+                        <select class="form-select" name="forma_pago" required>
+                            <option value="efectivo">Efectivo</option>
+                            <option value="tarjeta_credito">Tarjeta Crédito</option>
+                            <option value="tarjeta_debito">Tarjeta Débito</option>
+                            <option value="cheque">Cheque</option>
+                            <option value="transferencia">Transferencia</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Referencia</label>
+                        <input type="text" class="form-control" name="referencia" 
+                               placeholder="Nº cheque, comprobante, etc.">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Registrar Pago</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

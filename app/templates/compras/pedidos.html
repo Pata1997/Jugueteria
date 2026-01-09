@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Pedidos de Compra{% endblock %}
+{% block page_title %}Pedidos de Compra{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <i class="fas fa-shopping-basket"></i> Pedidos de Compra
+            </div>
+            <div class="col-auto">
+                <a href="{{ url_for('compras.crear_pedido') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Nuevo Pedido
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Filtros -->
+        <form method="GET" class="mb-3">
+            <div class="row g-2">
+                <div class="col-md-3">
+                    <select class="form-select" name="estado">
+                        <option value="">Todos los Estados</option>
+                        <option value="pendiente" {% if request.args.get('estado') == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                        <option value="cotizando" {% if request.args.get('estado') == 'cotizando' %}selected{% endif %}>Cotizando</option>
+                        <option value="aprobado" {% if request.args.get('estado') == 'aprobado' %}selected{% endif %}>Aprobado</option>
+                        <option value="ordenado" {% if request.args.get('estado') == 'ordenado' %}selected{% endif %}>Ordenado</option>
+                        <option value="completado" {% if request.args.get('estado') == 'completado' %}selected{% endif %}>Completado</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <input type="date" class="form-control" name="fecha_desde" value="{{ request.args.get('fecha_desde', '') }}">
+                </div>
+                <div class="col-md-3">
+                    <input type="date" class="form-control" name="fecha_hasta" value="{{ request.args.get('fecha_hasta', '') }}">
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-secondary w-100">
+                        <i class="fas fa-search"></i> Filtrar
+                    </button>
+                </div>
+            </div>
+        </form>
+        
+        <!-- Tabla -->
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Nº Pedido</th>
+                        <th>Fecha</th>
+                        <th>Solicitante</th>
+                        <th>Fecha Necesaria</th>
+                        <th>Items</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pedido in pedidos.items %}
+                    <tr>
+                        <td><strong>{{ pedido.nro_pedido }}</strong></td>
+                        <td>{{ pedido.fecha_pedido.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ pedido.usuario.nombre_completo }}</td>
+                        <td>{{ pedido.fecha_necesaria.strftime('%d/%m/%Y') if pedido.fecha_necesaria else '-' }}</td>
+                        <td class="text-center">
+                            <span class="badge bg-info">{{ pedido.detalles|length }}</span>
+                        </td>
+                        <td>
+                            {% if pedido.estado == 'pendiente' %}
+                                <span class="badge bg-warning">Pendiente</span>
+                            {% elif pedido.estado == 'cotizando' %}
+                                <span class="badge bg-info">Cotizando</span>
+                            {% elif pedido.estado == 'aprobado' %}
+                                <span class="badge bg-success">Aprobado</span>
+                            {% elif pedido.estado == 'ordenado' %}
+                                <span class="badge bg-primary">Ordenado</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Completado</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('compras.ver_pedido', id=pedido.id) }}" class="btn btn-sm btn-info">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            {% if pedido.estado == 'pendiente' or pedido.estado == 'cotizando' %}
+                            <button class="btn btn-sm btn-success" onclick="solicitarCotizaciones({{ pedido.id }})">
+                                <i class="fas fa-envelope"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center">No hay pedidos registrados</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Paginación -->
+        {% if pedidos.pages > 1 %}
+        <nav>
+            <ul class="pagination justify-content-center">
+                {% for num in pedidos.iter_pages() %}
+                    {% if num %}
+                        <li class="page-item {% if num == pedidos.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('compras.pedidos', page=num, **request.args) }}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Estadísticas -->
+<div class="row mt-3">
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h6>Pendientes</h6>
+                <h3>{{ estadisticas.pendientes }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h6>Cotizando</h6>
+                <h3>{{ estadisticas.cotizando }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h6>Aprobados</h6>
+                <h3>{{ estadisticas.aprobados }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h6>Ordenados</h6>
+                <h3>{{ estadisticas.ordenados }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function solicitarCotizaciones(pedidoId) {
+    if (confirm('¿Enviar solicitudes de cotización a proveedores?')) {
+        $.post('{{ url_for("compras.solicitar_cotizaciones") }}', {pedido_id: pedidoId})
+            .done(function(response) {
+                alert(response.mensaje);
+                location.reload();
+            })
+            .fail(function(xhr) {
+                alert('Error: ' + xhr.responseJSON.error);
+            });
+    }
+}
+</script>
+{% endblock %}

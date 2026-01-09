@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+
+{% block title %}Compras Pendientes de Pago{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3">
+                        <i class="fas fa-clock"></i> Compras Pendientes de Pago
+                    </h1>
+                    <p class="text-muted">Registra los pagos de compras. Elige origen: caja chica, otra fuente o dejar a crédito.</p>
+                </div>
+                <a href="{{ url_for('compras.registrar_compra') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Nueva Compra
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABLA DE COMPRAS -->
+    {% if compras.items %}
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nº Compra</th>
+                            <th>Proveedor</th>
+                            <th>Tipo</th>
+                            <th>Fecha</th>
+                            <th>Total</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for compra in compras.items %}
+                        <tr>
+                            <td><strong>{{ compra.numero_compra }}</strong></td>
+                            <td>{{ compra.proveedor.razon_social }}</td>
+                            <td>
+                                <span class="badge" style="background-color: {% if compra.tipo == 'producto' %}#007bff{% elif compra.tipo == 'servicio' %}#28a745{% elif compra.tipo == 'factura' %}#fd7e14{% else %}#6c757d{% endif %};">
+                                    {{ compra.tipo | upper }}
+                                </span>
+                            </td>
+                            <td>{{ compra.fecha_compra.strftime('%d/%m/%Y') }}</td>
+                            <td>
+                                <strong>Gs. {{ "{:,.0f}".format(compra.total) }}</strong>
+                                <small class="d-block text-muted">IVA: {{ "{:,.0f}".format(compra.iva) }}</small>
+                            </td>
+                            <td>
+                                {% if compra.estado == 'registrada' %}
+                                    <span class="badge bg-warning">No Pagado</span>
+                                {% elif compra.estado == 'parcial_pagada' %}
+                                    <span class="badge bg-info">Pago Parcial</span>
+                                {% elif compra.estado == 'pagada' %}
+                                    <span class="badge bg-success">Pagado</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" 
+                                        data-bs-target="#modalPagar" onclick="prepararModalPagar({{ compra.id }}, {{ compra.total }})">
+                                    <i class="fas fa-money-bill-wave"></i> Pagar
+                                </button>
+                                <a href="{{ url_for('compras.ver', id=compra.id) }}" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-eye"></i> Ver
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- PAGINACIÓN -->
+            {% if compras.pages > 1 %}
+            <nav class="d-flex justify-content-center mt-4">
+                <ul class="pagination">
+                    {% if compras.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('compras.pendientes_pago', page=compras.prev_num) }}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in compras.iter_pages() %}
+                        {% if page_num %}
+                            {% if page_num == compras.page %}
+                            <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                            {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('compras.pendientes_pago', page=page_num) }}">{{ page_num }}</a>
+                            </li>
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if compras.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('compras.pendientes_pago', page=compras.next_num) }}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i>
+        No hay compras pendientes de pago.
+        <a href="{{ url_for('compras.registrar_compra') }}" class="alert-link">Registra una nueva compra</a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- MODAL PARA PAGAR -->
+<div class="modal fade" id="modalPagar" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-credit-card"></i> Registrar Pago de Compra</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form method="POST" id="formPagar">
+                <div class="modal-body">
+                    <div class="alert alert-light border mb-3">
+                        <small>
+                            <strong>Compra:</strong> <span id="numeroCompra"></span><br>
+                            <strong>Total Compra:</strong> Gs. <span id="totalCompra"></span>
+                        </small>
+                    </div>
+
+                    <!-- MONTO A PAGAR -->
+                    <div class="mb-3">
+                        <label for="monto" class="form-label required">Monto a Pagar</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Gs.</span>
+                            <input type="number" class="form-control" id="monto" name="monto" 
+                                   min="0" step="0.01" required>
+                        </div>
+                        <small class="form-text text-muted">Puedes pagar el total o un monto parcial.</small>
+                    </div>
+
+                    <!-- ORIGEN DEL PAGO -->
+                    <div class="mb-4">
+                        <label class="form-label required">Origen del Pago</label>
+                        
+                        <!-- OPCIÓN 1: CAJA CHICA -->
+                        <div class="form-check mb-3 border-start border-primary ps-3">
+                            <input class="form-check-input" type="radio" name="origen_pago" 
+                                   id="origen_caja" value="caja_chica" onchange="mostrarOpciones('caja')">
+                            <label class="form-check-label" for="origen_caja">
+                                <strong><i class="fas fa-cash-register"></i> Caja Chica (Descuenta de Apertura)</strong>
+                                <small class="d-block text-muted">El monto se descuenta de la caja abierta y se registra como egreso.</small>
+                            </label>
+                            <div id="opcionCaja" class="d-none mt-2">
+                                <small class="text-success">✓ Automáticamente actualiza el efectivo disponible en caja</small>
+                            </div>
+                        </div>
+
+                        <!-- OPCIÓN 2: OTRA FUENTE -->
+                        <div class="form-check mb-3 border-start border-warning ps-3">
+                            <input class="form-check-input" type="radio" name="origen_pago" 
+                                   id="origen_otra" value="otra_fuente" onchange="mostrarOpciones('otra')">
+                            <label class="form-check-label" for="origen_otra">
+                                <strong><i class="fas fa-external-link-alt"></i> Otra Fuente (No afecta Caja)</strong>
+                                <small class="d-block text-muted">Transferencia, cheque, o fuente externa. No toca la caja chica.</small>
+                            </label>
+                            <div id="opcionOtra" class="d-none mt-2">
+                                <div class="mb-2">
+                                    <label for="referencia" class="form-label">Referencia (opcional)</label>
+                                    <input type="text" class="form-control form-control-sm" id="referencia" 
+                                           name="referencia" placeholder="Ej: Transferencia 12345, Cheque 789...">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- OPCIÓN 3: DEJAR A CRÉDITO -->
+                        <div class="form-check border-start border-danger ps-3">
+                            <input class="form-check-input" type="radio" name="origen_pago" 
+                                   id="origen_credito" value="dejar_credito" onchange="mostrarOpciones('credito')">
+                            <label class="form-check-label" for="origen_credito">
+                                <strong><i class="fas fa-handshake"></i> Dejar a Crédito (No pagar ahora)</strong>
+                                <small class="d-block text-muted">No registra pago. La compra queda pendiente para pagar después.</small>
+                            </label>
+                            <div id="opcionCredito" class="d-none mt-2">
+                                <small class="text-danger">⚠ Se creará una Cuenta por Pagar que podrás liquidar más tarde.</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- NOTAS -->
+                    <div class="mb-3">
+                        <label for="notas" class="form-label">Notas/Observaciones (opcional)</label>
+                        <textarea class="form-control" id="notas" name="notas" rows="2" 
+                                  placeholder="Agrega información adicional si es necesario..."></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check"></i> Confirmar Pago
+                    </button>
+                </div>
+
+                <input type="hidden" id="compra_id_hidden" name="compra_id">
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.required::after {
+    content: "*";
+    color: red;
+    margin-left: 4px;
+}
+</style>
+
+<script>
+let compraActual = null;
+let totalActual = 0;
+
+function prepararModalPagar(compraId, total) {
+    compraActual = compraId;
+    totalActual = total;
+    
+    // Obtener detalles de la compra
+    fetch(`/compras/api/compra/${compraId}`)
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('numeroCompra').textContent = data.numero_compra;
+            document.getElementById('totalCompra').textContent = parseFloat(data.total).toLocaleString('es-PY', {minimumFractionDigits: 2});
+            document.getElementById('compra_id_hidden').value = compraId;
+            document.getElementById('monto').value = parseFloat(data.total).toFixed(2);
+        })
+        .catch(e => console.error('Error:', e));
+}
+
+function mostrarOpciones(opcion) {
+    document.getElementById('opcionCaja').classList.add('d-none');
+    document.getElementById('opcionOtra').classList.add('d-none');
+    document.getElementById('opcionCredito').classList.add('d-none');
+    
+    if (opcion === 'caja') {
+        document.getElementById('opcionCaja').classList.remove('d-none');
+    } else if (opcion === 'otra') {
+        document.getElementById('opcionOtra').classList.remove('d-none');
+    } else if (opcion === 'credito') {
+        document.getElementById('opcionCredito').classList.remove('d-none');
+    }
+}
+
+document.getElementById('formPagar').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const origen = document.querySelector('input[name="origen_pago"]:checked');
+    if (!origen) {
+        alert('Selecciona un origen de pago');
+        return;
+    }
+    
+    // Si es dejar crédito, no necesita monto
+    if (origen.value === 'dejar_credito') {
+        document.getElementById('monto').value = 0;
+    } else {
+        const monto = parseFloat(document.getElementById('monto').value);
+        if (monto <= 0) {
+            alert('Ingresa un monto válido');
+            return;
+        }
+    }
+    
+    // Set form action dynamically
+    this.action = `/compras/${compraActual}/pagar`;
+    this.submit();
+});
+</script>
+{% endblock %}

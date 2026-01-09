@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Proveedores{% endblock %}
+{% block page_title %}Gestión de Proveedores{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <i class="fas fa-truck"></i> Proveedores
+            </div>
+            <div class="col-auto">
+                <a href="{{ url_for('compras.crear_proveedor') }}" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Nuevo Proveedor
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Filtros -->
+        <form method="GET" class="mb-3">
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <input type="text" class="form-control" name="buscar" value="{{ request.args.get('buscar', '') }}" placeholder="Buscar por nombre o RUC">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" name="tipo">
+                        <option value="">Todos los Tipos</option>
+                        <option value="nacional" {% if request.args.get('tipo') == 'nacional' %}selected{% endif %}>Nacional</option>
+                        <option value="internacional" {% if request.args.get('tipo') == 'internacional' %}selected{% endif %}>Internacional</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" name="activo">
+                        <option value="">Todos</option>
+                        <option value="1" {% if request.args.get('activo') == '1' %}selected{% endif %}>Activos</option>
+                        <option value="0" {% if request.args.get('activo') == '0' %}selected{% endif %}>Inactivos</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-secondary w-100">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                </div>
+            </div>
+        </form>
+        
+        <!-- Tabla -->
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>RUC</th>
+                        <th>Nombre</th>
+                        <th>Contacto</th>
+                        <th>Teléfono</th>
+                        <th>Email</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for proveedor in proveedores.items %}
+                    <tr>
+                        <td>{{ proveedor.ruc or '-' }}</td>
+                        <td>{{ proveedor.razon_social }}</td>
+                        <td>{{ proveedor.contacto_nombre or '-' }}</td>
+                        <td>{{ proveedor.telefono }}</td>
+                        <td>{{ proveedor.email or '-' }}</td>
+                        <td>
+                            {% if proveedor.activo %}
+                                <span class="badge bg-success">Activo</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('compras.ver_proveedor', id=proveedor.id) }}" class="btn btn-sm btn-info">
+                                <i class="fas fa-eye"></i> Ver
+                            </a>
+                            <a href="{{ url_for('compras.editar_proveedor', id=proveedor.id) }}" class="btn btn-sm btn-warning">
+                                <i class="fas fa-edit"></i> Editar
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center">No hay proveedores registrados</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Paginación -->
+        {% if proveedores.pages > 1 %}
+        <nav>
+            <ul class="pagination justify-content-center">
+                {% for num in proveedores.iter_pages() %}
+                    {% if num %}
+                        <li class="page-item {% if num == proveedores.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('compras.proveedores', page=num, **request.args) }}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

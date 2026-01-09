@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Proveedor - {{ proveedor.razon_social }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+  <div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+      <h1 class="h3"><i class="fas fa-truck"></i> {{ proveedor.razon_social }}</h1>
+      <div class="btn-group">
+        <a href="{{ url_for('compras.editar_proveedor', id=proveedor.id) }}" class="btn btn-warning">
+          <i class="fas fa-edit"></i> Editar
+        </a>
+        <a href="{{ url_for('compras.proveedores') }}" class="btn btn-outline-secondary">
+          <i class="fas fa-arrow-left"></i> Volver
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Datos del proveedor -->
+  <div class="row mb-4">
+    <div class="col-lg-6">
+      <div class="card h-100">
+        <div class="card-header bg-primary text-white"><strong>Datos del Proveedor</strong></div>
+        <div class="card-body">
+          <div class="row g-2">
+            <div class="col-md-6"><small class="text-muted">RUC</small><div>{{ proveedor.ruc }}</div></div>
+            <div class="col-md-6"><small class="text-muted">Teléfono</small><div>{{ proveedor.telefono or '-' }}</div></div>
+            <div class="col-md-6"><small class="text-muted">Email</small><div>{{ proveedor.email or '-' }}</div></div>
+            <div class="col-md-6"><small class="text-muted">Tipo</small><div>{{ proveedor.tipo_proveedor or '-' }}</div></div>
+            <div class="col-md-12"><small class="text-muted">Dirección</small><div>{{ proveedor.direccion or '-' }}</div></div>
+            <div class="col-md-6"><small class="text-muted">Contacto</small><div>{{ proveedor.contacto_nombre or '-' }}</div></div>
+            <div class="col-md-6"><small class="text-muted">Teléfono Contacto</small><div>{{ proveedor.contacto_telefono or '-' }}</div></div>
+            {% if proveedor.observaciones %}
+            <div class="col-12"><small class="text-muted">Observaciones</small><div class="text-muted">{{ proveedor.observaciones }}</div></div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resumen -->
+    <div class="col-lg-6">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="card border-info">
+            <div class="card-body text-center">
+              <div class="text-muted">Compras</div>
+              <div class="h3 mb-0">{{ compras.total }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card border-warning">
+            <div class="card-body text-center">
+              <div class="text-muted">Presupuestos</div>
+              <div class="h3 mb-0">{{ presupuestos.total }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Historial de Compras -->
+  <div class="card mb-4">
+    <div class="card-header bg-success text-white"><strong>Historial de Compras</strong></div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead class="table-light">
+            <tr>
+              <th>Número</th>
+              <th>Fecha</th>
+              <th>Tipo</th>
+              <th class="text-end">Total</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in compras.items %}
+            <tr>
+              <td>{{ c.numero_compra }}</td>
+              <td>{{ (c.fecha_compra or c.fecha_registro).strftime('%d/%m/%Y') }}</td>
+              <td>{{ c.tipo }}</td>
+              <td class="text-end">Gs. {{ "{:,.0f}".format(c.total or 0) }}</td>
+              <td>
+                {% if c.estado == 'registrada' %}<span class="badge bg-warning">Registrada</span>
+                {% elif c.estado == 'parcial_pagada' %}<span class="badge bg-info">Pago Parcial</span>
+                {% elif c.estado == 'pagada' %}<span class="badge bg-success">Pagada</span>
+                {% endif %}
+              </td>
+              <td>
+                <a href="{{ url_for('compras.ver', id=c.id) }}" class="btn btn-sm btn-outline-primary">
+                  <i class="fas fa-eye"></i> Ver
+                </a>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="text-center">Sin compras registradas</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if compras.pages > 1 %}
+      <nav>
+        <ul class="pagination justify-content-center">
+          {% for num in compras.iter_pages() %}
+            {% if num %}
+              <li class="page-item {% if num == compras.page %}active{% endif %}"><a class="page-link" href="{{ url_for('compras.ver_proveedor', id=proveedor.id, page_comp=num, page_pres=presupuestos.page) }}">{{ num }}</a></li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+      </nav>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Historial de Presupuestos -->
+  <div class="card">
+    <div class="card-header bg-info text-white"><strong>Historial de Presupuestos</strong></div>
+    <div class="card-body">
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead class="table-light">
+            <tr>
+              <th>Número</th>
+              <th>Fecha</th>
+              <th>Estado</th>
+              <th class="text-end">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in presupuestos.items %}
+            <tr>
+              <td>{{ p.numero_presupuesto }}</td>
+              <td>{{ (p.fecha_recepcion).strftime('%d/%m/%Y') }}</td>
+              <td>{{ p.estado }}</td>
+              <td class="text-end">Gs. {{ "{:,.0f}".format(p.total or 0) }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="text-center">Sin presupuestos</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if presupuestos.pages > 1 %}
+      <nav>
+        <ul class="pagination justify-content-center">
+          {% for num in presupuestos.iter_pages() %}
+            {% if num %}
+              <li class="page-item {% if num == presupuestos.page %}active{% endif %}"><a class="page-link" href="{{ url_for('compras.ver_proveedor', id=proveedor.id, page_comp=compras.page, page_pres=num) }}">{{ num }}</a></li>
+            {% endif %}
+          {% endfor %}
+        </ul>
+      </nav>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Ver Cliente{% endblock %}
+{% block page_title %}Detalle del Cliente{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-user"></i> {{ cliente.nombre }}</span>
+                <div>
+                    <a href="{{ url_for('clientes.editar', id=cliente.id) }}" class="btn btn-warning btn-sm">
+                        <i class="fas fa-edit"></i> Editar
+                    </a>
+                    <a href="{{ url_for('clientes.listar') }}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left"></i> Volver
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Tipo Documento:</strong> {{ cliente.tipo_documento }}<br>
+                        <strong>Número:</strong> {{ cliente.numero_documento }}<br>
+                        <strong>Tipo Cliente:</strong> <span class="badge bg-info">{{ cliente.tipo_cliente }}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Estado:</strong> 
+                        {% if cliente.activo %}
+                        <span class="badge bg-success">Activo</span>
+                        {% else %}
+                        <span class="badge bg-danger">Inactivo</span>
+                        {% endif %}
+                        <br>
+                        <strong>Fecha Registro:</strong> {{ cliente.fecha_registro.strftime('%d/%m/%Y') }}
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <h5>Información de Contacto</h5>
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <strong>Dirección:</strong> {{ cliente.direccion or 'No especificada' }}<br>
+                        <strong>Teléfono:</strong> {{ cliente.telefono or 'No especificado' }}<br>
+                        <strong>Email:</strong> {{ cliente.email or 'No especificado' }}
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <h5>Información Financiera</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Límite de Crédito:</strong> Gs. {{ "{:,.0f}".format(cliente.limite_credito) }}<br>
+                        <strong>Descuento Especial:</strong> {{ cliente.descuento_especial }}%
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Saldo Pendiente:</strong> 
+                        <span class="badge bg-warning">Gs. {{ "{:,.0f}".format(cliente.saldo_pendiente) }}</span>
+                    </div>
+                </div>
+                
+                {% if cliente.observaciones %}
+                <hr>
+                <h5>Observaciones</h5>
+                <p>{{ cliente.observaciones }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Estadísticas -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="fas fa-chart-bar"></i> Estadísticas
+            </div>
+            <div class="card-body">
+                <p><strong>Total Ventas:</strong> {{ cliente.ventas.count() }}</p>
+                <p><strong>Total Servicios:</strong> {{ cliente.solicitudes.count() }}</p>
+                <p><strong>Reclamos:</strong> {{ cliente.reclamos.count() }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Últimas Ventas -->
+<div class="card mt-3">
+    <div class="card-header">
+        <i class="fas fa-shopping-cart"></i> Últimas Ventas
+    </div>
+    <div class="card-body">
+        {% if cliente.ventas.limit(10).all() %}
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Nro. Factura</th>
+                        <th>Tipo</th>
+                        <th>Total</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for venta in cliente.ventas.order_by('-fecha_venta').limit(10) %}
+                    <tr>
+                        <td>{{ venta.fecha_venta.strftime('%d/%m/%Y') }}</td>
+                        <td><a href="{{ url_for('ventas.ver', id=venta.id) }}">{{ venta.numero_factura }}</a></td>
+                        <td><span class="badge bg-primary">{{ venta.tipo_venta }}</span></td>
+                        <td>Gs. {{ "{:,.0f}".format(venta.total) }}</td>
+                        <td>
+                            {% if venta.estado_pago == 'pagado' %}
+                            <span class="badge bg-success">Pagado</span>
+                            {% elif venta.estado_pago == 'pendiente' %}
+                            <span class="badge bg-danger">Pendiente</span>
+                            {% else %}
+                            <span class="badge bg-warning">Parcial</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">No hay ventas registradas</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

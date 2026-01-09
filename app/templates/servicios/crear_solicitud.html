@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}Nueva Solicitud de Servicio{% endblock %}
+{% block page_title %}Nueva Solicitud de Servicio{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-tools"></i> Datos de la Solicitud
+            </div>
+            <div class="card-body">
+                <form method="POST" id="formSolicitud">
+                    <!-- Cliente -->
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Cliente *</strong></label>
+                        <input type="text" class="form-control" id="buscar_cliente" placeholder="Buscar cliente...">
+                        <input type="hidden" name="cliente_id" id="cliente_id" required>
+                        <div id="cliente_info" class="mt-2"></div>
+                    </div>
+                    
+                    <!-- Descripción General -->
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Descripción del Problema/Servicio *</strong></label>
+                        <textarea class="form-control" name="descripcion" rows="3" required></textarea>
+                    </div>
+
+                    <!-- Prioridad y Fecha -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>Prioridad *</strong></label>
+                            <select class="form-select" name="prioridad" required>
+                                <option value="baja">Baja</option>
+                                <option value="media" selected>Media</option>
+                                <option value="alta">Alta</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>Fecha Deseada</strong></label>
+                            <input type="date" class="form-control" name="fecha_estimada">
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Tabla de Servicios y Productos -->
+                    <h6 class="mb-3"><strong>Servicios y Productos</strong></h6>
+                    
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm" id="tablaLineas">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th width="40%">Tipo/Producto</th>
+                                    <th width="15%">Cantidad</th>
+                                    <th width="20%">Precio Unit.</th>
+                                    <th width="15%">Subtotal</th>
+                                    <th width="10%">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="contenedor_lineas">
+                                <!-- Se agregan dinámicamente -->
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-secondary fw-bold">
+                                    <td colspan="3" class="text-end">COSTO TOTAL (Gs.):</td>
+                                    <td colspan="2" class="text-end">
+                                        <input type="text" class="form-control fw-bold" id="costo_total_display" readonly style="background-color: #f8f9fa;">
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <!-- Botones para agregar -->
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-sm btn-success" id="agregar_servicio">
+                            <i class="fas fa-plus"></i> Agregar Servicio
+                        </button>
+                        <button type="button" class="btn btn-sm btn-info" id="agregar_producto">
+                            <i class="fas fa-plus"></i> Agregar Producto
+                        </button>
+                    </div>
+
+                    <!-- Observaciones -->
+                    <div class="mb-3">
+                        <label class="form-label">Observaciones Adicionales</label>
+                        <textarea class="form-control" name="observaciones" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('servicios.solicitudes') }}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Registrar Solicitud
+                        </button>
+                    </div>
+
+                    <!-- Hidden field para líneas -->
+                    <input type="hidden" name="lineas_json" id="lineas_json" value="[]">
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    let lineas = [];
+    let contadorLineas = 0;
+
+    const formatter = new Intl.NumberFormat('es-PY');
+
+    function setPrecioDisplay($input, valor) {
+        const limpio = Math.round(parseFloat(valor) || 0);
+        $input.data('raw', limpio);
+        $input.val(formatter.format(limpio));
+    }
+
+    function getRaw($input) {
+        return parseFloat($input.data('raw')) || 0;
+    }
+
+    // Autocomplete para Cliente
+    $('#buscar_cliente').autocomplete({
+        source: '{{ url_for("clientes.buscar") }}',
+        minLength: 2,
+        select: function(event, ui) {
+            $('#cliente_id').val(ui.item.id);
+            $('#cliente_info').html(`
+                <div class="alert alert-success py-2 mb-0">
+                    <strong>${ui.item.label}</strong><br>
+                    <small>Tel: ${ui.item.telefono || 'N/A'}</small>
+                </div>
+            `);
+        }
+    });
+
+    // Agregar servicio
+    $('#agregar_servicio').click(function() {
+        agregarLinea('servicio');
+    });
+
+    // Agregar producto
+    $('#agregar_producto').click(function() {
+        agregarLinea('producto');
+    });
+
+    function agregarLinea(tipo) {
+        const id = contadorLineas++;
+        const html = `
+            <tr class="linea-item" data-id="${id}" data-tipo="${tipo}">
+                <td>
+                    <input type="hidden" class="tipo_item" value="${tipo}">
+                    <input type="hidden" class="item_id" value="">
+                    <input type="text" class="form-control form-control-sm buscar_item" placeholder="${tipo === 'servicio' ? 'Buscar servicio...' : 'Buscar producto...'}">
+                    <small class="info_item text-muted mt-1 d-block"></small>
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm cantidad_item" value="1" min="1" step="0.01">
+                </td>
+                <td>
+                    <input type="text" class="form-control form-control-sm precio_item" value="0" readonly data-raw="0" style="background-color: #f8f9fa;">
+                </td>
+                <td>
+                    <input type="text" class="form-control form-control-sm subtotal_item fw-bold" value="0" readonly data-raw="0" style="background-color: #f8f9fa;">
+                </td>
+                <td>
+                    <button type="button" class="btn btn-sm btn-danger eliminar_linea">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+        
+        $('#contenedor_lineas').append(html);
+        
+        const $fila = $(`[data-id="${id}"]`);
+        const $buscar = $fila.find('.buscar_item');
+        const $cantidad = $fila.find('.cantidad_item');
+        const $precio = $fila.find('.precio_item');
+        const $subtotal = $fila.find('.subtotal_item');
+        const $info = $fila.find('.info_item');
+        
+        // Autocomplete para servicio o producto
+        if (tipo === 'servicio') {
+            $buscar.autocomplete({
+                source: '{{ url_for("servicios.buscar_tipos") }}',
+                minLength: 1,
+                select: function(event, ui) {
+                    $fila.find('.item_id').val(ui.item.id);
+                    $buscar.val(ui.item.nombre);
+                    setPrecioDisplay($precio, ui.item.precio_base);
+                    const desc = ui.item.descripcion ? ` - ${ui.item.descripcion}` : '';
+                    $info.html(`<strong>${ui.item.nombre}</strong>${desc}`);
+                    calcularSubtotal($fila);
+                }
+            }).data("ui-autocomplete")._renderItem = function(ul, item) {
+                const desc = item.descripcion ? " - " + item.descripcion : "";
+                return $("<li>").append(`<div><strong>${item.nombre}</strong>${desc}</div>`).appendTo(ul);
+            };
+        } else {
+            $buscar.autocomplete({
+                source: '{{ url_for("productos.buscar") }}',
+                minLength: 1,
+                select: function(event, ui) {
+                    $fila.find('.item_id').val(ui.item.id);
+                    $buscar.val(ui.item.codigo);
+                    setPrecioDisplay($precio, ui.item.precio_venta);
+                    $info.html(`<strong>${ui.item.codigo}</strong> - ${ui.item.label.split(' - ')[1]}`);
+                    calcularSubtotal($fila);
+                }
+            }).data("ui-autocomplete")._renderItem = function(ul, item) {
+                return $("<li>").append("<div><strong>" + item.codigo + "</strong> - " + item.label.split(' - ')[1] + "</div>").appendTo(ul);
+            };
+        }
+        
+        // Calcular subtotal cuando cambia cantidad
+        $cantidad.on('input', function() {
+            calcularSubtotal($fila);
+        });
+        
+        // Eliminar línea
+        $fila.find('.eliminar_linea').click(function() {
+            $fila.remove();
+            actualizarTotal();
+        });
+    }
+
+    function calcularSubtotal($fila) {
+        const cantidad = parseFloat($fila.find('.cantidad_item').val()) || 0;
+        const precio = getRaw($fila.find('.precio_item'));
+        const subtotal = cantidad * precio;
+        setPrecioDisplay($fila.find('.subtotal_item'), subtotal);
+        actualizarTotal();
+    }
+
+    function actualizarTotal() {
+        let total = 0;
+        $('#contenedor_lineas .subtotal_item').each(function() {
+            total += getRaw($(this));
+        });
+        $('#costo_total_display').val(formatter.format(Math.round(total)));
+    }
+
+    // Enviar formulario
+    $('#formSolicitud').submit(function(e) {
+        e.preventDefault();
+
+        // Recopilar líneas
+        let lineas = [];
+        let error = false;
+        
+        $('#contenedor_lineas tr').each(function() {
+            const $fila = $(this);
+            const item_id = $fila.find('.item_id').val();
+            const tipo_item = $fila.find('.tipo_item').val();
+            const cantidad = parseFloat($fila.find('.cantidad_item').val()) || 0;
+            const precio = getRaw($fila.find('.precio_item'));
+            const subtotal = getRaw($fila.find('.subtotal_item'));
+
+            if (!item_id || !item_id.trim()) {
+                alert('Seleccione un servicio/producto en todas las líneas');
+                error = true;
+                return false;
+            }
+
+            lineas.push({
+                tipo_item: tipo_item,
+                item_id: item_id,
+                cantidad: cantidad,
+                precio_unitario: precio,
+                subtotal: subtotal
+            });
+        });
+
+        if (error) {
+            return false;
+        }
+
+        if (lineas.length === 0) {
+            alert('Agregue al menos un servicio o producto');
+            return false;
+        }
+
+        $('#lineas_json').val(JSON.stringify(lineas));
+        this.submit();
+    });
+
+    // Agregar primera línea vacía
+    agregarLinea('servicio');
+});
+</script>
+{% endblock %}

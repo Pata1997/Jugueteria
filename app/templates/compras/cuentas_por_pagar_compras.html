@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}Cuentas por Pagar - Compras{% endblock %}
+
+{% block content %}
+<div class="container-fluid p-4">
+    <!-- ENCABEZADO -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3">
+                        <i class="fas fa-hand-holding-usd"></i> Cuentas por Pagar - Compras
+                    </h1>
+                    <p class="text-muted">Compras dejadas a crédito que están pendientes de pago.</p>
+                </div>
+                <a href="{{ url_for('compras.pendientes_pago') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left"></i> Volver a Pendientes
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESUMEN DE CUENTAS -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Total Pendiente</h6>
+                    <h3 class="mb-0">
+                        Gs. {{ "{:,.0f}".format(cuentas.items | sum(attribute='monto_adeudado') if cuentas.items else 0) }}
+                    </h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-danger">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Vencidas</h6>
+                    <h3 class="mb-0">
+                        {{ cuentas.items | selectattr('estado', 'equalto', 'vencida') | list | length if cuentas.items else 0 }}
+                    </h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-info">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Proveedores</h6>
+                    <h3 class="mb-0">
+                        {{ (cuentas.items | map(attribute='proveedor_id') | unique | list | length) if cuentas.items else 0 }}
+                    </h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABLA DE CUENTAS POR PAGAR -->
+    {% if cuentas.items %}
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Compra</th>
+                            <th>Proveedor</th>
+                            <th>Total Compra</th>
+                            <th>Adeudado</th>
+                            <th>Vencimiento</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cuenta in cuentas.items %}
+                        <tr class="{% if cuenta.fecha_vencimiento and cuenta.fecha_vencimiento < today() %}table-danger{% endif %}">
+                            <td>{{ cuenta.fecha_creacion.strftime('%d/%m/%Y') if cuenta.fecha_creacion else '-' }}</td>
+                            <td>
+                                <strong>{{ cuenta.compra.numero_compra if cuenta.compra else 'N/A' }}</strong>
+                            </td>
+                            <td>{{ cuenta.proveedor.razon_social if cuenta.proveedor else 'N/A' }}</td>
+                            <td>Gs. {{ "{:,.0f}".format(cuenta.monto_total or 0) }}</td>
+                            <td>
+                                <strong class="text-danger">Gs. {{ "{:,.0f}".format(cuenta.monto_adeudado or 0) }}</strong>
+                            </td>
+                            <td>
+                                {% if cuenta.fecha_vencimiento %}
+                                    {{ cuenta.fecha_vencimiento.strftime('%d/%m/%Y') }}
+                                    {% if cuenta.fecha_vencimiento < today() %}
+                                        <span class="badge bg-danger ms-1">VENCIDA</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">Sin fecha</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if cuenta.estado == 'pendiente' %}
+                                    <span class="badge bg-warning">Pendiente</span>
+                                {% elif cuenta.estado == 'parcial' %}
+                                    <span class="badge bg-info">Pago Parcial</span>
+                                {% elif cuenta.estado == 'pagada' %}
+                                    <span class="badge bg-success">Pagada</span>
+                                {% elif cuenta.estado == 'vencida' %}
+                                    <span class="badge bg-danger">Vencida</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if cuenta.compra %}
+                                <a href="{{ url_for('compras.ver', id=cuenta.compra.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i> Ver Compra
+                                </a>
+                                <button type="button" class="btn btn-sm btn-success" 
+                                        data-bs-toggle="modal" data-bs-target="#modalPagarCuenta"
+                                        onclick="prepararPagoCuenta({{ cuenta.id }}, {{ cuenta.monto_adeudado }}, '{{ cuenta.compra.numero_compra }}')">
+                                    <i class="fas fa-money-bill-wave"></i> Pagar
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- PAGINACIÓN -->
+            {% if cuentas.pages > 1 %}
+            <nav class="d-flex justify-content-center mt-4">
+                <ul class="pagination">
+                    {% if cuentas.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('compras.cuentas_por_pagar_compras', page=cuentas.prev_num) }}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in cuentas.iter_pages() %}
+                        {% if page_num %}
+                            {% if page_num == cuentas.page %}
+                            <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                            {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('compras.cuentas_por_pagar_compras', page=page_num) }}">{{ page_num }}</a>
+                            </li>
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if cuentas.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('compras.cuentas_por_pagar_compras', page=cuentas.next_num) }}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-success">
+        <i class="fas fa-check-circle"></i>
+        No hay cuentas por pagar pendientes. ¡Excelente!
+    </div>
+    {% endif %}
+</div>
+
+<!-- MODAL PAGAR CUENTA -->
+<div class="modal fade" id="modalPagarCuenta" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-credit-card"></i> Pagar Cuenta por Pagar</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form method="POST" action="{{ url_for('compras.registrar_pago_proveedor', cuenta_id=0) }}" id="formPagarCuenta">
+                <div class="modal-body">
+                    <div class="alert alert-light border mb-3">
+                        <small>
+                            <strong>Compra:</strong> <span id="cuentaCompra"></span><br>
+                            <strong>Adeudado:</strong> Gs. <span id="cuentaMonto"></span>
+                        </small>
+                    </div>
+
+                    <!-- MONTO A PAGAR -->
+                    <div class="mb-3">
+                        <label for="montoCuenta" class="form-label required">Monto a Pagar</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Gs.</span>
+                            <input type="number" class="form-control" id="montoCuenta" name="monto" 
+                                   min="0" step="0.01" required>
+                        </div>
+                    </div>
+
+                    <!-- FORMA DE PAGO -->
+                    <div class="mb-3">
+                        <label for="forma_pago" class="form-label required">Forma de Pago</label>
+                        <select class="form-select" id="forma_pago" name="forma_pago" required>
+                            <option value="">-- Selecciona --</option>
+                            <option value="efectivo">Efectivo</option>
+                            <option value="transferencia">Transferencia</option>
+                            <option value="cheque">Cheque</option>
+                        </select>
+                    </div>
+
+                    <!-- REFERENCIA -->
+                    <div class="mb-3">
+                        <label for="referenciaCuenta" class="form-label">Referencia</label>
+                        <input type="text" class="form-control" id="referenciaCuenta" name="referencia"
+                               placeholder="Nº Cheque, Transferencia, etc.">
+                    </div>
+
+                    <!-- OBSERVACIONES -->
+                    <div class="mb-3">
+                        <label for="observacionesCuenta" class="form-label">Observaciones</label>
+                        <textarea class="form-control" id="observacionesCuenta" name="observaciones" rows="2"></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check"></i> Registrar Pago
+                    </button>
+                </div>
+
+                <input type="hidden" id="cuentaIdHidden" name="cuenta_id">
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.required::after {
+    content: "*";
+    color: red;
+    margin-left: 4px;
+}
+</style>
+
+<script>
+function today() {
+    return new Date();
+}
+
+function prepararPagoCuenta(cuentaId, montoAdeudado, numeroCompra) {
+    document.getElementById('cuentaCompra').textContent = numeroCompra;
+    document.getElementById('cuentaMonto').textContent = parseFloat(montoAdeudado).toLocaleString('es-PY', {minimumFractionDigits: 2});
+    document.getElementById('montoCuenta').value = parseFloat(montoAdeudado).toFixed(2);
+    document.getElementById('cuentaIdHidden').value = cuentaId;
+    
+    // Update form action with cuenta_id
+    document.getElementById('formPagarCuenta').action = `{{ url_for('compras.registrar_pago_proveedor', cuenta_id=0) }}`.replace('0', cuentaId);
+}
+</script>
+{% endblock %}

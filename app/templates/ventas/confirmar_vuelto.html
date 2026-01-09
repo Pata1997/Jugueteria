@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Vuelto - Factura {{ numero_factura }}{% endblock %}
+
+{% block content %}
+<div class="modal fade show d-block" id="modalVuelto" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle"></i> Factura Procesada
+                </h5>
+            </div>
+            <div class="modal-body text-center py-5">
+                <div class="mb-4">
+                    <h6 class="text-muted">Factura N°</h6>
+                    <h3 class="fw-bold">{{ numero_factura }}</h3>
+                </div>
+                
+                {% if vuelto > 0 %}
+                <div class="alert alert-info">
+                    <h6 class="mb-2">Vuelto a Devolver</h6>
+                    <h2 class="mb-0 text-success">
+                        <strong>Gs. {{ "{:,.0f}".format(vuelto) }}</strong>
+                    </h2>
+                </div>
+                {% else %}
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle fa-3x mb-3"></i>
+                    <h5>Pago exacto</h5>
+                    <p class="mb-0">Sin vuelto</p>
+                </div>
+                {% endif %}
+                
+                <hr>
+                
+                <small class="text-muted">
+                    <i class="fas fa-keyboard"></i> Presione cualquier tecla o haga clic para continuar
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    const ventaId = {{ venta_id }};
+    
+    // Descargar ticket PDF de forma directa (sin popup)
+    console.log('[ticket] Descargando ticket para venta', ventaId);
+    const linkTicket = document.createElement('a');
+    linkTicket.href = '/ventas/' + ventaId + '/ticket';
+    linkTicket.download = 'ticket_{{ numero_factura }}.pdf';
+    document.body.appendChild(linkTicket);
+    linkTicket.click();
+    document.body.removeChild(linkTicket);
+    
+    // Cerrar con cualquier tecla o clic
+    $(document).on('keydown click', function() {
+        window.location.href = '{{ url_for('ventas.listar') }}';
+    });
+    
+    // Auto-redirigir después de 10 segundos
+    setTimeout(function() {
+        window.location.href = '{{ url_for('ventas.listar') }}';
+    }, 10000);
+});
+</script>
+{% endblock %}

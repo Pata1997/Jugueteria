@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}Cajas{% endblock %}
+{% block page_title %}Gestión de Cajas{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-cash-register"></i> Listado de Cajas
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Número</th>
+                                <th>Nombre</th>
+                                <th>Ubicación</th>
+                                <th>Estado</th>
+                                <th>Apertura Actual</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for caja in cajas %}
+                            <tr>
+                                <td>{{ caja.numero }}</td>
+                                <td>{{ caja.nombre }}</td>
+                                <td>{{ caja.ubicacion or '-' }}</td>
+                                <td>
+                                    {% if caja.activo %}
+                                        <span class="badge bg-success">Activa</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactiva</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if caja.apertura_actual %}
+                                        <span class="badge bg-info">Abierta</span>
+                                        <br><small>{{ caja.apertura_actual.fecha_apertura.strftime('%d/%m/%Y %H:%M') }}</small>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Cerrada</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if caja.activo and not caja.apertura_actual %}
+                                    <a href="{{ url_for('ventas.apertura_caja', caja_id=caja.id) }}" class="btn btn-sm btn-success">
+                                        <i class="fas fa-door-open"></i> Abrir
+                                    </a>
+                                    {% elif caja.apertura_actual %}
+                                    <a href="{{ url_for('ventas.ver_apertura', id=caja.apertura_actual.id) }}" class="btn btn-sm btn-info">
+                                        <i class="fas fa-eye"></i> Ver
+                                    </a>
+                                    <a href="{{ url_for('ventas.cerrar_caja', id=caja.apertura_actual.id) }}" class="btn btn-sm btn-danger">
+                                        <i class="fas fa-door-closed"></i> Cerrar
+                                    </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center">No hay cajas registradas</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Historial de Aperturas -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <i class="fas fa-history"></i> Historial de Aperturas
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Caja</th>
+                                <th>Apertura</th>
+                                <th>Cierre</th>
+                                <th>Usuario</th>
+                                <th>Ventas</th>
+                                <th>Total</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for apertura in aperturas.items %}
+                            <tr>
+                                <td>{{ apertura.caja.nombre }}</td>
+                                <td>{{ apertura.fecha_apertura.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>
+                                    {% if apertura.fecha_cierre %}
+                                        {{ apertura.fecha_cierre.strftime('%d/%m/%Y %H:%M') }}
+                                    {% else %}
+                                        <span class="badge bg-success">Abierta</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ apertura.usuario.nombre_completo }}</td>
+                                <td class="text-center">{{ apertura.ventas|length }}</td>
+                                <td class="text-end">
+                                    {% if apertura.fecha_cierre %}
+                                        Gs. {{ "{:,.0f}".format(apertura.total_ventas or 0) }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('ventas.ver_apertura', id=apertura.id) }}" class="btn btn-sm btn-info">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if apertura.fecha_cierre %}
+                                    <a href="{{ url_for('ventas.arqueo_caja', id=apertura.id) }}" class="btn btn-sm btn-secondary" target="_blank">
+                                        <i class="fas fa-file-pdf"></i>
+                                    </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center">No hay historial de aperturas</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Paginación -->
+                {% if aperturas.pages > 1 %}
+                <nav>
+                    <ul class="pagination justify-content-center">
+                        {% for num in aperturas.iter_pages() %}
+                            {% if num %}
+                                <li class="page-item {% if num == aperturas.page %}active{% endif %}">
+                                    <a class="page-link" href="{{ url_for('ventas.cajas', page=num) }}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Panel Lateral -->
+    <div class="col-md-4">
+        {% if current_user.rol == 'admin' %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="fas fa-plus"></i> Nueva Caja
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('ventas.crear_caja') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Número *</label>
+                        <input type="text" class="form-control" name="numero" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Nombre *</label>
+                        <input type="text" class="form-control" name="nombre" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Ubicación</label>
+                        <input type="text" class="form-control" name="ubicacion">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" name="activo" checked>
+                            <label class="form-check-label">Caja Activa</label>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-save"></i> Crear Caja
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <i class="fas fa-chart-bar"></i> Resumen del Día
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted">Cajas Abiertas</small>
+                    <h4>{{ resumen.cajas_abiertas }}</h4>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted">Ventas del Día</small>
+                    <h4>{{ resumen.ventas_dia }}</h4>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted">Total Vendido</small>
+                    <h4 class="text-success">Gs. {{ "{:,.0f}".format(resumen.total_ventas) }}</h4>
+                </div>
+                
+                <hr>
+                
+                <div class="mb-3">
+                    <small class="text-muted">Total Cobrado</small>
+                    <h5>Gs. {{ "{:,.0f}".format(resumen.total_cobrado) }}</h5>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted">Pendiente de Cobro</small>
+                    <h5 class="text-danger">Gs. {{ "{:,.0f}".format(resumen.total_pendiente) }}</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

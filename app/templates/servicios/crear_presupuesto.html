@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}Crear Presupuesto - {{ solicitud.numero_solicitud }}{% endblock %}
+{% block page_title %}Crear Presupuesto para {{ solicitud.numero_solicitud }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="fas fa-file-invoice-dollar"></i> Información de la Solicitud
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>Solicitud:</strong><br>
+                        {{ solicitud.numero_solicitud }}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Cliente:</strong><br>
+                        {{ solicitud.cliente.nombre }}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Tipo de Servicio:</strong><br>
+                        <span class="badge bg-primary">{{ solicitud.tipo_servicio.codigo }}</span>
+                        {{ solicitud.tipo_servicio.nombre }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-edit"></i> Datos del Presupuesto
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <!-- Descripción del Trabajo -->
+                    <div class="mb-3">
+                        <label class="form-label">Descripción del Trabajo *</label>
+                        <textarea class="form-control" name="descripcion_trabajo" rows="3" required 
+                                  placeholder="Detalle el trabajo a realizar..."></textarea>
+                    </div>
+
+                    <!-- Costos -->
+                    <h5 class="mt-4 mb-3"><i class="fas fa-calculator"></i> Costos</h5>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Mano de Obra (Gs.)</label>
+                            <input type="number" class="form-control costo-input" name="mano_obra" 
+                                   step="0.01" value="0" data-campo="mano_obra">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Costo de Materiales (Gs.)</label>
+                            <input type="number" class="form-control costo-input" name="costo_materiales" 
+                                   step="0.01" value="0" data-campo="costo_materiales">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Otros Costos (Gs.)</label>
+                            <input type="number" class="form-control costo-input" name="otros_costos" 
+                                   step="0.01" value="0" data-campo="otros_costos">
+                        </div>
+                    </div>
+
+                    <!-- Descuento e IVA -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Descuento (Gs.)</label>
+                            <input type="number" class="form-control costo-input" name="descuento" 
+                                   step="0.01" value="0" data-campo="descuento">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">IVA (Gs.) <small class="text-muted">(se calcula 10%)</small></label>
+                            <input type="number" class="form-control" id="iva" name="iva" 
+                                   step="0.01" value="0" readonly style="background-color: #f8f9fa;">
+                        </div>
+                    </div>
+
+                    <!-- Totales -->
+                    <div class="card bg-light mb-3">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Subtotal:</strong>
+                                    <div class="h5" id="subtotal">Gs. 0</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>TOTAL:</strong>
+                                    <div class="h4 text-success" id="total">Gs. 0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Información Adicional -->
+                    <h5 class="mt-4 mb-3"><i class="fas fa-info-circle"></i> Información Adicional</h5>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Días Estimados</label>
+                            <input type="number" class="form-control" name="dias_estimados" 
+                                   min="1" value="1">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Fecha de Validez del Presupuesto</label>
+                            <input type="date" class="form-control" name="fecha_validez">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Observaciones</label>
+                        <textarea class="form-control" name="observaciones" rows="2" 
+                                  placeholder="Notas adicionales..."></textarea>
+                    </div>
+
+                    <!-- Botones -->
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a href="{{ url_for('servicios.ver_solicitud', id=solicitud.id) }}" 
+                           class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Crear Presupuesto
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel Lateral -->
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="fas fa-lightbulb"></i> Sugerencias
+            </div>
+            <div class="card-body small">
+                <p><strong>Mano de Obra:</strong><br>
+                Costo del trabajo realizado por técnicos.</p>
+                
+                <p><strong>Materiales:</strong><br>
+                Costo de piezas, repuestos o materiales necesarios.</p>
+                
+                <p><strong>Otros Costos:</strong><br>
+                Transporte, instalación u otros gastos.</p>
+                
+                <p><strong>Descuento:</strong><br>
+                Descuento especial si aplica.</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-bars"></i> Resumen
+            </div>
+            <div class="card-body small">
+                <div class="mb-2">
+                    <strong>Solicitud:</strong><br>
+                    {{ solicitud.numero_solicitud }}
+                </div>
+                <div class="mb-2">
+                    <strong>Cliente:</strong><br>
+                    {{ solicitud.cliente.nombre }}
+                </div>
+                <div class="mb-2">
+                    <strong>Teléfono:</strong><br>
+                    {{ solicitud.cliente.telefono or 'No registrado' }}
+                </div>
+                <div>
+                    <strong>Prioridad:</strong><br>
+                    {% if solicitud.prioridad == 'baja' %}
+                        <span class="badge bg-success">Baja</span>
+                    {% elif solicitud.prioridad == 'media' %}
+                        <span class="badge bg-warning">Media</span>
+                    {% elif solicitud.prioridad == 'alta' %}
+                        <span class="badge bg-danger">Alta</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Función para calcular totales
+    function calcularTotales() {
+        let manoObra = parseFloat($('input[name="mano_obra"]').val()) || 0;
+        let materiales = parseFloat($('input[name="costo_materiales"]').val()) || 0;
+        let otrosCostos = parseFloat($('input[name="otros_costos"]').val()) || 0;
+        let descuento = parseFloat($('input[name="descuento"]').val()) || 0;
+        
+        let subtotal = manoObra + materiales + otrosCostos;
+        let iva = (subtotal - descuento) * 0.10; // IVA del 10%
+        let total = subtotal - descuento + iva;
+        
+        // Actualizar campos
+        $('input[name="iva"]').val(iva.toFixed(2));
+        
+        // Mostrar en pantalla con formato
+        $('#subtotal').text('Gs. ' + new Intl.NumberFormat('es-PY').format(Math.round(subtotal)));
+        $('#total').text('Gs. ' + new Intl.NumberFormat('es-PY').format(Math.round(total)));
+    }
+    
+    // Calcular cuando cambien los costos
+    $('.costo-input').on('input', function() {
+        calcularTotales();
+    });
+    
+    // Calcular al cargar la página
+    calcularTotales();
+});
+</script>
+{% endblock %}

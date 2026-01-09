@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Ver Producto{% endblock %}
+{% block page_title %}Detalle del Producto{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-box"></i> {{ producto.nombre }}</span>
+                <div>
+                    <a href="{{ url_for('productos.editar', id=producto.id) }}" class="btn btn-warning btn-sm">
+                        <i class="fas fa-edit"></i> Editar
+                    </a>
+                    <a href="{{ url_for('productos.listar') }}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left"></i> Volver
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Código:</strong> {{ producto.codigo }}<br>
+                        <strong>Categoría:</strong> {{ producto.categoria.nombre if producto.categoria else '-' }}<br>
+                        <strong>Tipo:</strong> 
+                        {% if producto.tipo_producto == 'producto' %}
+                        <span class="badge bg-primary">Producto</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Insumo</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Unidad:</strong> {{ producto.unidad_medida or '-' }}<br>
+                        <strong>Importado:</strong> {% if producto.es_importado %}Sí{% else %}No{% endif %}<br>
+                        <strong>Estado:</strong>
+                        {% if producto.activo %}
+                        <span class="badge bg-success">Activo</span>
+                        {% else %}
+                        <span class="badge bg-danger">Inactivo</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if producto.descripcion %}
+                <p><strong>Descripción:</strong><br>{{ producto.descripcion }}</p>
+                {% endif %}
+                
+                <hr>
+                
+                <h5>Información de Precios</h5>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Precio de Compra:</strong> Gs. {{ "{:,.0f}".format(producto.precio_compra) }}<br>
+                        <strong>Precio de Venta:</strong> <span class="text-success">Gs. {{ "{:,.0f}".format(producto.precio_venta) }}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Margen:</strong> 
+                        {% if producto.precio_compra > 0 %}
+                        {{ "{:.1f}".format(((producto.precio_venta - producto.precio_compra) / producto.precio_compra) * 100) }}%
+                        {% else %}
+                        -
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <h5>Información de Stock</h5>
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>Stock Actual:</strong><br>
+                        {% if producto.necesita_reposicion %}
+                        <span class="badge bg-danger" style="font-size: 1.5rem;">{{ producto.stock_actual }}</span>
+                        {% else %}
+                        <span class="badge bg-success" style="font-size: 1.5rem;">{{ producto.stock_actual }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Stock Mínimo:</strong> {{ producto.stock_minimo }}<br>
+                        <strong>Stock Máximo:</strong> {{ producto.stock_maximo }}
+                    </div>
+                    <div class="col-md-4">
+                        {% if producto.necesita_reposicion %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> Necesita reposición
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Movimientos -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <i class="fas fa-exchange-alt"></i> Últimos Movimientos
+            </div>
+            <div class="card-body">
+                {% if movimientos %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Tipo</th>
+                                <th>Cantidad</th>
+                                <th>Stock Anterior</th>
+                                <th>Stock Actual</th>
+                                <th>Motivo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for mov in movimientos %}
+                            <tr>
+                                <td>{{ mov.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>
+                                    {% if mov.tipo_movimiento == 'entrada' %}
+                                    <span class="badge bg-success">Entrada</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Salida</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ mov.cantidad }}</td>
+                                <td>{{ mov.stock_anterior }}</td>
+                                <td>{{ mov.stock_actual }}</td>
+                                <td>{{ mov.motivo }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No hay movimientos registrados</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Estadísticas -->
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-bar"></i> Valor en Stock
+            </div>
+            <div class="card-body">
+                <p><strong>Valor Compra:</strong><br>
+                Gs. {{ "{:,.0f}".format(producto.stock_actual * producto.precio_compra) }}</p>
+                
+                <p><strong>Valor Venta:</strong><br>
+                <span class="text-success">Gs. {{ "{:,.0f}".format(producto.stock_actual * producto.precio_venta) }}</span></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

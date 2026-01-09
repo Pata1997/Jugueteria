@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Productos{% endblock %}
+{% block page_title %}Gestión de Productos{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-box"></i> Lista de Productos</span>
+        <div>
+            <a href="{{ url_for('productos.categorias') }}" class="btn btn-info btn-sm">
+                <i class="fas fa-tags"></i> Categorías
+            </a>
+            <a href="{{ url_for('productos.stock_bajo') }}" class="btn btn-warning btn-sm">
+                <i class="fas fa-exclamation-triangle"></i> Stock Bajo
+            </a>
+            <a href="{{ url_for('productos.crear') }}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus"></i> Nuevo Producto
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Filtros -->
+        <form method="GET" class="mb-3">
+            <div class="row">
+                <div class="col-md-5">
+                    <input type="text" class="form-control" name="search" placeholder="Buscar por nombre o código..." value="{{ search }}">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" name="categoria_id">
+                        <option value="">Todas las categorías</option>
+                        {% for cat in categorias %}
+                        <option value="{{ cat.id }}" {% if request.args.get('categoria_id') == cat.id|string %}selected{% endif %}>
+                            {{ cat.nombre }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select class="form-select" name="tipo">
+                        <option value="">Todos los tipos</option>
+                        <option value="producto" {% if request.args.get('tipo') == 'producto' %}selected{% endif %}>Productos</option>
+                        <option value="insumo" {% if request.args.get('tipo') == 'insumo' %}selected{% endif %}>Insumos</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-primary w-100" type="submit">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                </div>
+            </div>
+        </form>
+        
+        <!-- Tabla -->
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nombre</th>
+                        <th>Categoría</th>
+                        <th>Tipo</th>
+                        <th>Stock</th>
+                        <th>Precio Venta</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for producto in productos.items %}
+                    <tr>
+                        <td>{{ producto.codigo }}</td>
+                        <td>{{ producto.nombre }}</td>
+                        <td>{{ producto.categoria.nombre if producto.categoria else '-' }}</td>
+                        <td>
+                            {% if producto.tipo_producto == 'producto' %}
+                            <span class="badge bg-primary">Producto</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Insumo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if producto.necesita_reposicion %}
+                            <span class="badge bg-danger">{{ producto.stock_actual }}</span>
+                            {% else %}
+                            <span class="badge bg-success">{{ producto.stock_actual }}</span>
+                            {% endif %}
+                        </td>
+                        <td>Gs. {{ "{:,.0f}".format(producto.precio_venta) }}</td>
+                        <td>
+                            {% if producto.activo %}
+                            <span class="badge bg-success">Activo</span>
+                            {% else %}
+                            <span class="badge bg-danger">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('productos.ver', id=producto.id) }}" class="btn btn-sm btn-info" title="Ver">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{{ url_for('productos.editar', id=producto.id) }}" class="btn btn-sm btn-warning" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Paginación -->
+        {% if productos.pages > 1 %}
+        <nav>
+            <ul class="pagination">
+                {% if productos.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ productos.prev_num }}{% if search %}&search={{ search }}{% endif %}">Anterior</a>
+                </li>
+                {% endif %}
+                
+                {% for page_num in productos.iter_pages() %}
+                    {% if page_num %}
+                    <li class="page-item {% if page_num == productos.page %}active{% endif %}">
+                        <a class="page-link" href="?page={{ page_num }}{% if search %}&search={{ search }}{% endif %}">{{ page_num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if productos.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ productos.next_num }}{% if search %}&search={{ search }}{% endif %}">Siguiente</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

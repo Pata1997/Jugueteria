@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block title %}Tipos de Servicio{% endblock %}
+{% block page_title %}Gestión de Tipos de Servicio{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-wrench"></i> Tipos de Servicio</span>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="collapse" data-bs-target="#formCrear">
+                    <i class="fas fa-plus"></i> Nuevo Tipo
+                </button>
+            </div>
+            <div class="card-body">
+                <!-- Formulario de Creación (Colapsable) -->
+                <div class="collapse mb-4" id="formCrear">
+                    <div class="card card-body bg-light">
+                        <h6 class="mb-3">Crear Nuevo Tipo de Servicio</h6>
+                        <form method="POST" action="{{ url_for('servicios.crear_tipo') }}">
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <label class="form-label">Código *</label>
+                                    <input type="text" class="form-control" name="codigo" required>
+                                </div>
+                                <div class="col-md-9">
+                                    <label class="form-label">Nombre *</label>
+                                    <input type="text" class="form-control" name="nombre" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Descripción</label>
+                                <textarea class="form-control" name="descripcion" rows="2"></textarea>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Precio Base (Gs.) *</label>
+                                    <input type="number" class="form-control" name="precio_base" step="0.01" required min="0" value="0">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Tiempo Estimado (días)</label>
+                                    <input type="number" class="form-control" name="tiempo_estimado" min="1" value="1">
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-save"></i> Guardar
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#formCrear">
+                                    <i class="fas fa-times"></i> Cancelar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Tabla de Tipos -->
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Descripción</th>
+                                <th>Precio Base</th>
+                                <th>Días Est.</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if tipos %}
+                                {% for tipo in tipos %}
+                                <tr>
+                                    <td><strong>{{ tipo.codigo }}</strong></td>
+                                    <td>{{ tipo.nombre }}</td>
+                                    <td>
+                                        {% if tipo.descripcion %}
+                                            <small>{{ tipo.descripcion[:50] }}{% if tipo.descripcion|length > 50 %}...{% endif %}</small>
+                                        {% else %}
+                                            <small class="text-muted">—</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>Gs. {{ "{:,.0f}".format(tipo.precio_base|float) }}</td>
+                                    <td>
+                                        {% if tipo.tiempo_estimado %}
+                                            {{ tipo.tiempo_estimado }}
+                                        {% else %}
+                                            <small class="text-muted">—</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editarModal" 
+                                                onclick="cargarDatos({{ tipo.id }}, '{{ tipo.codigo }}', '{{ tipo.nombre }}', '{{ tipo.descripcion or '' }}', {{ tipo.precio_base }}, {{ tipo.tiempo_estimado or 1 }})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <form action="{{ url_for('servicios.inhabilitar_tipo', id=tipo.id) }}" method="POST" style="display:inline;">
+                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Inhabilitar este tipo de servicio?')">
+                                                <i class="fas fa-ban"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">
+                                    <i class="fas fa-inbox"></i> No hay tipos de servicio registrados
+                                </td>
+                            </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel Lateral -->
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i> Información
+            </div>
+            <div class="card-body">
+                <p><strong>¿Qué es un Tipo de Servicio?</strong></p>
+                <p>Los tipos de servicio definen las categorías de trabajos que realiza tu empresa, con precios base y tiempos estimados.</p>
+                
+                <p class="mt-3"><strong>Opciones disponibles:</strong></p>
+                <ul class="small">
+                    <li><strong>Crear:</strong> Haz clic en "Nuevo Tipo" para agregar</li>
+                    <li><strong>Editar:</strong> Usa el botón <i class="fas fa-edit text-warning"></i></li>
+                    <li><strong>Inhabilitar:</strong> Usa el botón <i class="fas fa-ban text-danger"></i></li>
+                </ul>
+
+                <div class="alert alert-info mt-3 small">
+                    <strong>Nota:</strong> Los tipos deshabilitados no aparecerán en nuevas solicitudes, pero los datos históricos se mantienen.
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-3">
+            <div class="card-header">
+                <i class="fas fa-eye"></i> Tipos Inactivos
+            </div>
+            <div class="card-body">
+                {% set tipos_inactivos = query_object.query.filter_by(activo=False).all() if query_object else [] %}
+                {% if tipos_inactivos %}
+                    <p class="small text-muted">Tienes <strong>{{ tipos_inactivos|length }}</strong> tipo(s) inactivo(s)</p>
+                    <ul class="small list-unstyled">
+                        {% for tipo in tipos_inactivos %}
+                        <li class="mb-2">
+                            <span class="badge bg-secondary">{{ tipo.codigo }}</span> {{ tipo.nombre }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="small text-muted">Todos los tipos están activos</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar -->
+<div class="modal fade" id="editarModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('servicios.editar_tipo', id=0) }}" id="formEditar">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Tipo de Servicio</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="tipo_id" name="tipo_id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Código *</label>
+                        <input type="text" class="form-control" id="codigo" name="codigo" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Nombre *</label>
+                        <input type="text" class="form-control" id="nombre" name="nombre" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <textarea class="form-control" id="descripcion" name="descripcion" rows="2"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">Precio Base (Gs.) *</label>
+                            <input type="number" class="form-control" id="precio_base" name="precio_base" step="0.01" required min="0">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tiempo Estimado (días)</label>
+                            <input type="number" class="form-control" id="tiempo_estimado" name="tiempo_estimado" min="1">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function cargarDatos(id, codigo, nombre, descripcion, precio, dias) {
+    document.getElementById('tipo_id').value = id;
+    document.getElementById('codigo').value = codigo;
+    document.getElementById('nombre').value = nombre;
+    document.getElementById('descripcion').value = descripcion;
+    document.getElementById('precio_base').value = precio;
+    document.getElementById('tiempo_estimado').value = dias;
+    
+    // Actualizar URL del formulario
+    document.getElementById('formEditar').action = `/servicios/tipos/${id}/editar`;
+}
+</script>
+{% endblock %}
