@@ -51,7 +51,10 @@ def create_app(config_name=None):
     # Ruta principal
     @app.route('/')
     def index():
-        return redirect(url_for('dashboard.index'))
+        from flask_login import current_user
+        if current_user.is_authenticated:
+            return redirect(url_for('dashboard.index'))
+        return redirect(url_for('auth.login'))
     
     # Manejadores de errores
     @app.errorhandler(404)

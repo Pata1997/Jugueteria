@@ -71,4 +71,13 @@ def create_app(config_class=Config):
         from app.models.usuario import Usuario
         return Usuario.query.get(int(user_id))
     
+    # Ruta principal
+    @app.route('/')
+    def index():
+        from flask_login import current_user
+        from flask import redirect, url_for
+        if current_user.is_authenticated:
+            return redirect(url_for('dashboard.index'))
+        return redirect(url_for('auth.login'))
+    
     return app
