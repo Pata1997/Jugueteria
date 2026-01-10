@@ -33,7 +33,7 @@ def create_app(config_class=Config):
     login_manager.login_message_category = 'warning'
     
     # Importar modelos (necesario para migrations)
-    from app.models import usuario, cliente, producto, servicio, venta, compra, empleado, configuracion
+    from app.models import usuario, cliente, producto, servicio, venta, compra, configuracion
     
     # Context processor para hacer config disponible en todos los templates
     @app.context_processor
@@ -51,7 +51,7 @@ def create_app(config_class=Config):
         return dict(config=config)
     
     # Registrar blueprints
-    from app.routes import auth, dashboard, clientes, productos, servicios, ventas, compras, rrhh, reportes, configuracion as config_bp, caja
+    from app.routes import auth, dashboard, clientes, productos, servicios, ventas, compras, reportes, configuracion as config_bp, caja
     
     app.register_blueprint(auth.bp)
     app.register_blueprint(dashboard.bp)
@@ -60,7 +60,6 @@ def create_app(config_class=Config):
     app.register_blueprint(servicios.bp)
     app.register_blueprint(ventas.bp)
     app.register_blueprint(compras.bp)
-    app.register_blueprint(rrhh.bp)
     app.register_blueprint(reportes.bp)
     app.register_blueprint(config_bp.bp)
     app.register_blueprint(caja.bp)

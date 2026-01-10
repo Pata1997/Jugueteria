@@ -26,8 +26,20 @@ class AperturaCaja(db.Model):
     monto_final = db.Column(db.Numeric(12, 2))
     monto_sistema = db.Column(db.Numeric(12, 2))
     diferencia = db.Column(db.Numeric(12, 2))
-    estado = db.Column(db.String(20), default='abierto')  # abierto, cerrado
+    estado = db.Column(db.String(20), default='abierto')  # abierto, en_arqueo, cerrada
     observaciones = db.Column(db.Text)
+    
+    # Campos para arqueo (valores reales contados)
+    monto_efectivo_real = db.Column(db.Numeric(12, 2))
+    monto_tarjeta_real = db.Column(db.Numeric(12, 2))
+    monto_transferencias_real = db.Column(db.Numeric(12, 2))
+    monto_cheques_real = db.Column(db.Numeric(12, 2))
+    
+    # Campos para arqueo (valores esperados por forma de pago)
+    monto_efectivo_esperado = db.Column(db.Numeric(12, 2))
+    monto_tarjeta_esperado = db.Column(db.Numeric(12, 2))
+    monto_transferencias_esperado = db.Column(db.Numeric(12, 2))
+    monto_cheques_esperado = db.Column(db.Numeric(12, 2))
     
     cajero = db.relationship('Usuario', backref='aperturas_caja')
     ventas = db.relationship('Venta', backref='apertura_caja', lazy='dynamic')
@@ -86,12 +98,51 @@ class Venta(db.Model):
     
     def actualizar_estado_pago(self):
         pagado = self.monto_pagado
+        estado_anterior = self.estado_pago
+        
         if pagado >= self.total:
             self.estado_pago = 'pagado'
         elif pagado > 0:
             self.estado_pago = 'parcial'
         else:
             self.estado_pago = 'pendiente'
+        
+        # Si cambió a "pagado", descontar stock de los productos
+        if self.estado_pago == 'pagado' and estado_anterior != 'pagado':
+            self._descontar_stock()
+    
+    def _descontar_stock(self):
+        """Descuenta el stock de los productos cuando la venta se marca como pagada"""
+        from app.models.producto import Producto, MovimientoProducto
+        from flask_login import current_user
+        from datetime import datetime
+        
+        for detalle in self.detalles:
+            if detalle.producto_id:
+                producto = Producto.query.get(detalle.producto_id)
+                if producto:
+                    # Registrar movimiento anterior
+                    stock_anterior = producto.stock_actual
+                    
+                    # Descontar stock (convertir a int)
+                    cantidad = int(detalle.cantidad)
+                    producto.stock_actual -= cantidad
+                    
+                    # Registrar movimiento en la auditoría
+                    movimiento = MovimientoProducto(
+                        producto_id=producto.id,
+                        tipo_movimiento='salida',
+                        cantidad=cantidad,
+                        stock_anterior=stock_anterior,
+                        stock_actual=producto.stock_actual,
+                        motivo='venta',
+                        referencia_tipo='venta',
+                        referencia_id=self.id,
+                        costo_unitario=producto.precio_compra,
+                        usuario_id=self.vendedor_id if hasattr(self, 'vendedor_id') else None
+                    )
+                    from app import db
+                    db.session.add(movimiento)
     
     def __repr__(self):
         return f'<Venta {self.numero_factura}>'

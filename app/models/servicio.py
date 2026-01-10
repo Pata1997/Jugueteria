@@ -102,7 +102,7 @@ class OrdenServicio(db.Model):
     fecha_orden = db.Column(db.DateTime, default=datetime.utcnow)
     solicitud_id = db.Column(db.Integer, db.ForeignKey('solicitudes_servicio.id'), nullable=False)
     presupuesto_id = db.Column(db.Integer, db.ForeignKey('presupuestos.id'))
-    tecnico_id = db.Column(db.Integer, db.ForeignKey('empleados.id'))
+    tecnico_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'))  # Cambiado de empleados a usuarios
     estado = db.Column(db.String(20), default='pendiente')  # pendiente, en_proceso, finalizado, entregado, cancelado
     fecha_inicio = db.Column(db.DateTime)
     fecha_fin_estimada = db.Column(db.DateTime)
@@ -112,7 +112,7 @@ class OrdenServicio(db.Model):
     
     # Relaciones
     presupuesto = db.relationship('Presupuesto', backref='ordenes')
-    tecnico = db.relationship('Empleado', backref='ordenes_servicio')
+    tecnico = db.relationship('Usuario', foreign_keys=[tecnico_id], backref='ordenes_servicio_tecnico')  # Cambiado a Usuario
     detalles_insumos = db.relationship('OrdenServicioDetalle', backref='orden', lazy='dynamic', cascade='all, delete-orphan')
     
     def __repr__(self):

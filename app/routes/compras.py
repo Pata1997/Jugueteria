@@ -6,6 +6,7 @@ from app.models import (Proveedor, PedidoCompra, PedidoCompraDetalle,
                         CuentaPorPagar, PagoProveedor, Producto, PagoCompra, 
                         MovimientoCaja, AperturaCaja, MovimientoProducto, HistorialPrecio)
 from datetime import datetime, date, timedelta
+from decimal import Decimal
 import json
 from sqlalchemy import or_
 
@@ -324,7 +325,7 @@ def registrar_pago_proveedor(cuenta_id):
             observaciones=request.form.get('observaciones')
         )
         
-        cuenta.monto_pagado += float(pago.monto)
+        cuenta.monto_pagado += pago.monto
         cuenta.actualizar_estado()
         
         db.session.add(pago)
@@ -398,11 +399,16 @@ def registrar_compra():
                 )
                 db.session.add(detalle)
             
-            # Calcular totales
-            iva = subtotal * 0.10  # IVA 10%
-            total = subtotal + iva
+            # Calcular totales (IVA INCLUIDO)
+            # Si el precio ya incluye IVA 10%, entonces:
+            # Total = subtotal (con IVA incluido)
+            # IVA = Total / 11 (porque 100% + 10% = 110% = 11/10)
+            # Subtotal sin IVA = Total - IVA
+            total = subtotal  # El precio ingresado ya incluye IVA
+            iva = total / 11  # IVA incluido
+            subtotal_sin_iva = total - iva
             
-            compra.subtotal = subtotal
+            compra.subtotal = subtotal_sin_iva
             compra.iva = iva
             compra.total = total
             
@@ -459,14 +465,19 @@ def get_caja_abierta():
 @login_required
 def pagar_compra(id):
     """Registra pago de compra con origen flexible y actualiza stock"""
+    import sys
     compra = Compra.query.get_or_404(id)
     
     try:
-        monto = float(request.form.get('monto', 0))
+        monto = Decimal(str(request.form.get('monto', 0) or 0))
         origen_pago = request.form.get('origen_pago')  # caja_chica, otra_fuente, dejar_credito
+        print(f"DEBUG pagar_compra: compra={id}, origen={origen_pago}, monto={monto}", file=sys.stderr, flush=True)
         
-        if monto <= 0:
-            return jsonify({'error': 'Monto debe ser mayor a 0'}), 400
+        # Validar monto solo cuando NO es crédito
+        if origen_pago != 'dejar_credito':
+            if monto <= 0:
+                flash('El monto debe ser mayor a 0', 'danger')
+                return redirect(url_for('compras.pendientes_pago'))
         
         # Actualizar stock SOLO al pagar (si es tipo producto y no se ha actualizado)
         if compra.tipo == 'producto' and not compra.stock_actualizado:
@@ -495,7 +506,7 @@ def pagar_compra(id):
                         db.session.add(movimiento)
                         
                         # Actualizar precio de compra si es diferente
-                        if det.precio_unitario != float(producto.precio_compra or 0):
+                        if det.precio_unitario != (producto.precio_compra or Decimal('0')):
                             historial = HistorialPrecio(
                                 producto_id=producto.id,
                                 precio_compra_anterior=producto.precio_compra,
@@ -510,49 +521,76 @@ def pagar_compra(id):
         
         
         if origen_pago == 'dejar_credito':
-            # Crear cuenta por pagar y no registrar pago
+            # Parámetros de crédito
+            try:
+                plazo_credito_dias = int(request.form.get('plazo_credito_dias') or 0)
+            except ValueError:
+                plazo_credito_dias = 0
+            fecha_base = datetime.utcnow().date()
+            fecha_venc = fecha_base + timedelta(days=plazo_credito_dias) if plazo_credito_dias > 0 else None
+            obs_credito = request.form.get('observaciones_credito', '')
+            
+            # Guardar en la compra
+            compra.plazo_credito_dias = plazo_credito_dias or None
+            compra.fecha_vencimiento_credito = fecha_venc
+            compra.observaciones_credito = obs_credito
+            
+            # Crear cuenta por pagar completa (no registra pago)
             cuenta = CuentaPorPagar(
                 compra_id=compra.id,
                 proveedor_id=compra.proveedor_id,
-                monto_total=compra.total,
                 monto_adeudado=compra.total,
-                estado='pendiente'
+                estado='pendiente',
+                fecha_vencimiento=fecha_venc,
+                observaciones=obs_credito
             )
             db.session.add(cuenta)
-            compra.estado = 'registrada'  # Queda registrada sin pagar
+            compra.estado = 'registrada'  # Queda registrada sin pagar (a crédito)
             
         elif origen_pago == 'caja_chica':
             # Descuenta de apertura de caja
+            print(f"DEBUG: entró a caja_chica", file=sys.stderr, flush=True)
             apertura = AperturaCaja.query.filter_by(estado='abierto').first()
             if not apertura:
-                return jsonify({'error': 'No hay caja abierta'}), 400
-            
-            # Crear movimiento de egreso
+                flash('Debe abrir una caja primero', 'danger')
+                return redirect(url_for('compras.pendientes_pago'))
+
+            # Verificar fondos suficientes en caja
+            disponible = apertura.monto_final if apertura.monto_final is not None else (apertura.monto_inicial or Decimal('0'))
+            print(f"DEBUG: disponible={disponible}, monto={monto}", file=sys.stderr, flush=True)
+            if disponible < monto:
+                flash('Fondos insuficientes en caja', 'danger')
+                return redirect(url_for('compras.pendientes_pago'))
+
+            # Crear movimiento de egreso (salida) por compra
+            print(f"DEBUG: creando MovimientoCaja", file=sys.stderr, flush=True)
             movimiento = MovimientoCaja(
                 apertura_caja_id=apertura.id,
                 tipo='egreso',
-                concepto=f'Compra a {compra.proveedor.razon_social}',
+                concepto='Compra',
                 monto=monto,
                 referencia_tipo='compra',
                 referencia_id=compra.id,
                 usuario_id=current_user.id
             )
             db.session.add(movimiento)
-            
+            db.session.flush()  # Obtener ID del movimiento
+
             # Crear registro de pago
+            print(f"DEBUG: creando PagoCompra", file=sys.stderr, flush=True)
             pago = PagoCompra(
                 compra_id=compra.id,
                 monto=monto,
                 origen_pago='caja_chica',
                 apertura_caja_id=apertura.id,
-                movimiento_caja_id=None,  # Se actualizará con el ID del movimiento
+                movimiento_caja_id=movimiento.id,
                 referencia=request.form.get('referencia', ''),
                 usuario_paga_id=current_user.id
             )
-            
+
             # Actualizar monto en apertura caja (efectivo disponible)
-            apertura.monto_final = (apertura.monto_final or apertura.monto_inicial) - monto
-            
+            apertura.monto_final = disponible - monto
+
             # Actualizar estado de compra
             saldo_pendiente = compra.total - monto
             if saldo_pendiente <= 0:
@@ -568,8 +606,9 @@ def pagar_compra(id):
                     estado='pendiente'
                 )
                 db.session.add(cuenta)
-            
+
             db.session.add(pago)
+            print(f"DEBUG: pago agregado a sesión, estado compra={compra.estado}", file=sys.stderr, flush=True)
             
         elif origen_pago == 'otra_fuente':
             # Pago externo, no afecta caja
@@ -599,8 +638,13 @@ def pagar_compra(id):
             
             db.session.add(pago)
         
+        print(f"DEBUG: before commit, pago estado={getattr(pago, 'id', 'no-id')}", file=sys.stderr, flush=True)
         db.session.commit()
-        flash('Pago registrado correctamente', 'success')
+        print(f"DEBUG: after commit, pago id={pago.id if 'pago' in locals() else 'N/A'}", file=sys.stderr, flush=True)
+        if origen_pago == 'dejar_credito':
+            flash('Compra dejada a crédito. Stock actualizado y CxP creada.', 'success')
+        else:
+            flash('Pago registrado correctamente', 'success')
         return redirect(url_for('compras.pendientes_pago'))
         
     except Exception as e:

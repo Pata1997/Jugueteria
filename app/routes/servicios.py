@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.models import (TipoServicio, SolicitudServicio, Presupuesto, PresupuestoDetalle,
                         OrdenServicio, OrdenServicioDetalle, Reclamo, ReclamoSeguimiento,
-                        Cliente, Producto, Empleado, Venta, VentaDetalle)
+                        Cliente, Producto, Venta, VentaDetalle, Usuario)
 from datetime import datetime, date
 
 bp = Blueprint('servicios', __name__, url_prefix='/servicios')
@@ -91,17 +91,55 @@ def solicitudes():
 def crear_solicitud():
     if request.method == 'POST':
         try:
+            # Procesar líneas JSON y validar stock
+            import json
+            lineas_json = request.form.get('lineas_json', '[]')
+            lineas = json.loads(lineas_json)
+            
+            # Validar stock de productos
+            from app.models import Producto
+            productos_sin_stock = []
+            
+            for linea in lineas:
+                if linea.get('tipo_item') == 'producto':
+                    producto_id = linea.get('item_id')
+                    cantidad_requerida = int(linea.get('cantidad', 0))
+                    
+                    if producto_id and cantidad_requerida > 0:
+                        producto = Producto.query.get(producto_id)
+                        if producto:
+                            if producto.stock_actual < cantidad_requerida:
+                                productos_sin_stock.append({
+                                    'nombre': producto.nombre,
+                                    'codigo': producto.codigo,
+                                    'requerido': cantidad_requerida,
+                                    'disponible': producto.stock_actual
+                                })
+            
+            # Si hay productos sin stock, mostrar error
+            if productos_sin_stock:
+                mensaje_error = 'No se puede crear la solicitud por falta de stock:\n'
+                for p in productos_sin_stock:
+                    mensaje_error += f"\n• {p['nombre']} (Código: {p['codigo']}) - Necesita: {p['requerido']} unidades, Disponible: {p['disponible']}"
+                flash(mensaje_error, 'warning')
+                
+                # Retornar a formulario con datos
+                clientes = Cliente.query.filter_by(activo=True).all()
+                tipos = TipoServicio.query.filter_by(activo=True).all()
+                return render_template('servicios/crear_solicitud.html', 
+                                     clientes=clientes, 
+                                     tipos=tipos, 
+                                     tipos_servicio=tipos,
+                                     form_data=request.form)
+            
+            # Si hay suficiente stock, continuar
             # Generar número de solicitud
             ultimo = SolicitudServicio.query.order_by(SolicitudServicio.id.desc()).first()
             numero = f"SOL-{(ultimo.id + 1 if ultimo else 1):06d}"
 
-            # Procesar líneas JSON y calcular total
+            # Procesar líneas
             cliente_id = request.form.get('cliente_id')
             cliente = Cliente.query.get(cliente_id)
-            
-            import json
-            lineas_json = request.form.get('lineas_json', '[]')
-            lineas = json.loads(lineas_json)
             
             costo_estimado = 0
             for linea in lineas:
@@ -125,7 +163,7 @@ def crear_solicitud():
                 tipo_servicio_id=primer_servicio_id or 1,
                 descripcion=request.form.get('descripcion'),
                 prioridad=request.form.get('prioridad', 'normal'),
-                fecha_estimada=request.form.get('fecha_estimada') or None,  # Convertir cadena vacía a None
+                fecha_estimada=request.form.get('fecha_estimada') or None,
                 usuario_registro_id=current_user.id,
                 observaciones=request.form.get('observaciones'),
                 costo_estimado=costo_estimado,
@@ -479,7 +517,8 @@ def crear_orden(solicitud_id):
             db.session.rollback()
             flash(f'Error: {str(e)}', 'danger')
     
-    tecnicos = Empleado.query.filter_by(activo=True, cargo='tecnico').all()
+    # Obtener usuarios con rol 'tecnico' en lugar de empleados
+    tecnicos = Usuario.query.filter_by(activo=True, rol='tecnico').all()
     return render_template('servicios/crear_orden.html', 
                          solicitud=solicitud, 
                          presupuesto=presupuesto,

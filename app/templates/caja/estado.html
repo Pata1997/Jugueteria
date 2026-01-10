@@ -35,42 +35,41 @@
                         </div>
                     </div>
 
-                    <!-- RESUMEN DE OPERACIONES -->
+                    <!-- RESUMEN DE OPERACIONES POR FORMA DE PAGO -->
                     <div class="row mt-4">
-                        <div class="col-md-3">
-                            <div class="card bg-light">
-                                <div class="card-body text-center">
-                                    <i class="fas fa-shopping-cart fa-2x text-primary mb-2"></i>
-                                    <h6>Total Ventas</h6>
-                                    <h4 class="mb-0">{{ ventas_list|length }}</h4>
-                                    <small class="text-muted">Gs. {{ "{:,.0f}".format(total_ventas) }}</small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
+                        <div class="col-md-6">
                             <div class="card bg-light">
                                 <div class="card-body text-center">
                                     <i class="fas fa-money-bill-wave fa-2x text-success mb-2"></i>
-                                    <h6>Efectivo</h6>
+                                    <h6>Total Efectivo</h6>
                                     <h4 class="mb-0">Gs. {{ "{:,.0f}".format(total_efectivo) }}</h4>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-6">
                             <div class="card bg-light">
                                 <div class="card-body text-center">
                                     <i class="fas fa-credit-card fa-2x text-info mb-2"></i>
-                                    <h6>Tarjetas</h6>
+                                    <h6>Total Tarjeta Crédito/Débito</h6>
                                     <h4 class="mb-0">Gs. {{ "{:,.0f}".format(total_tarjeta) }}</h4>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-6 mt-3">
                             <div class="card bg-light">
                                 <div class="card-body text-center">
-                                    <i class="fas fa-coins fa-2x text-warning mb-2"></i>
-                                    <h6>Otros</h6>
-                                    <h4 class="mb-0">Gs. {{ "{:,.0f}".format(total_otros) }}</h4>
+                                    <i class="fas fa-university fa-2x text-primary mb-2"></i>
+                                    <h6>Total Transferencias</h6>
+                                    <h4 class="mb-0">Gs. {{ "{:,.0f}".format(total_transferencias) }}</h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mt-3">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-check fa-2x text-warning mb-2"></i>
+                                    <h6>Total Cheques</h6>
+                                    <h4 class="mb-0">Gs. {{ "{:,.0f}".format(total_cheques) }}</h4>
                                 </div>
                             </div>
                         </div>
@@ -85,51 +84,115 @@
                                         <i class="fas fa-wallet fa-lg text-secondary me-2"></i>
                                         <strong>Total esperado en caja (Sistema):</strong>
                                     </div>
-                                    <div class="h4 mb-0">Gs. {{ "{:,.0f}".format(apertura_actual.monto_inicial + total_efectivo) }}</div>
+                                    <div class="h4 mb-0">Gs. {{ "{:,.0f}".format(monto_esperado) }}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- ÚLTIMAS VENTAS -->
+                    <!-- ÚLTIMAS OPERACIONES (VENTAS + PAGOS DE COMPRAS) -->
                     <div class="mt-4">
-                        <h6><i class="fas fa-list"></i> Últimas Ventas</h6>
-                        {% if ventas_list %}
-                            <div class="table-responsive">
-                                <table class="table table-sm table-hover">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Factura</th>
-                                            <th>Fecha</th>
-                                            <th>Cliente</th>
-                                            <th class="text-end">Total</th>
-                                            <th>Estado Pago</th>
-                                            <th></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for venta in ventas_list[-10:] %}
-                                        <tr>
-                                            <td><small>{{ venta.numero_factura }}</small></td>
-                                            <td><small>{{ venta.fecha_venta.strftime('%H:%M') }}</small></td>
-                                            <td><small>{{ venta.cliente.nombre if venta.cliente else 'N/A' }}</small></td>
-                                            <td class="text-end"><small>Gs. {{ "{:,.0f}".format(venta.total) }}</small></td>
-                                            <td>
-                                                <span class="badge bg-success">{{ venta.estado_pago }}</span>
-                                            </td>
-                                            <td>
-                                                <a href="{{ url_for('ventas.ver', id=venta.id) }}" class="btn btn-sm btn-outline-primary">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
+                        <h6><i class="fas fa-exchange-alt"></i> Últimos Movimientos de Caja</h6>
+                        <ul class="nav nav-tabs mb-3" role="tablist">
+                            <li class="nav-item">
+                                <a class="nav-link active" data-bs-toggle="tab" href="#tab-ventas" role="tab">
+                                    <i class="fas fa-shopping-cart"></i> Ventas ({{ ventas_list|length }})
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" data-bs-toggle="tab" href="#tab-compras" role="tab">
+                                    <i class="fas fa-shopping-bag"></i> Pagos de Compras ({{ pagos_compras|length }})
+                                </a>
+                            </li>
+                        </ul>
+
+                        <!-- TAB: VENTAS -->
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="tab-ventas" role="tabpanel">
+                                {% if ventas_list %}
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Factura</th>
+                                                    <th>Fecha</th>
+                                                    <th>Cliente</th>
+                                                    <th class="text-end">Total</th>
+                                                    <th>Estado Pago</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for venta in ventas_list[-10:] %}
+                                                <tr>
+                                                    <td><small>{{ venta.numero_factura }}</small></td>
+                                                    <td><small>{{ venta.fecha_venta.strftime('%H:%M') }}</small></td>
+                                                    <td><small>{{ venta.cliente.nombre if venta.cliente else 'N/A' }}</small></td>
+                                                    <td class="text-end"><small>Gs. {{ "{:,.0f}".format(venta.total) }}</small></td>
+                                                    <td>
+                                                        <span class="badge bg-success">{{ venta.estado_pago }}</span>
+                                                    </td>
+                                                    <td>
+                                                        <a href="{{ url_for('ventas.ver', id=venta.id) }}" class="btn btn-sm btn-outline-primary">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted text-center">No hay ventas registradas</p>
+                                {% endif %}
                             </div>
-                        {% else %}
-                            <p class="text-muted text-center">No hay ventas registradas</p>
-                        {% endif %}
+
+                            <!-- TAB: PAGOS DE COMPRAS -->
+                            <div class="tab-pane fade" id="tab-compras" role="tabpanel">
+                                {% if pagos_compras %}
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Número Compra</th>
+                                                    <th>Hora</th>
+                                                    <th>Proveedor</th>
+                                                    <th class="text-end">Monto Pagado</th>
+                                                    <th>Origen</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for pago in pagos_compras[-10:] %}
+                                                <tr>
+                                                    <td><small>{{ pago.compra.numero_compra }}</small></td>
+                                                    <td><small>{{ pago.fecha_pago.strftime('%H:%M') }}</small></td>
+                                                    <td><small>{{ pago.compra.proveedor.nombre if pago.compra.proveedor else 'N/A' }}</small></td>
+                                                    <td class="text-end"><small>Gs. {{ "{:,.0f}".format(pago.monto) }}</small></td>
+                                                    <td>
+                                                        {% if pago.origen_pago == 'caja_chica' %}
+                                                            <span class="badge bg-warning text-dark">Caja Chica</span>
+                                                        {% elif pago.origen_pago == 'otra_fuente' %}
+                                                            <span class="badge bg-info">Otra Fuente</span>
+                                                        {% else %}
+                                                            <span class="badge bg-secondary">{{ pago.origen_pago }}</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td>
+                                                        <a href="{{ url_for('compras.ver', id=pago.compra.id) }}" class="btn btn-sm btn-outline-primary">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted text-center">No hay pagos de compras registrados</p>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
 
                 {% else %}
@@ -211,75 +274,179 @@
                 <h5 class="modal-title"><i class="fas fa-lock"></i> Cerrar Caja y Realizar Arqueo</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="{{ url_for('caja.cerrar') }}">
-                <div class="modal-body">
-                    <div class="alert alert-warning">
-                        <strong><i class="fas fa-exclamation-triangle"></i> Importante:</strong>
-                        Al cerrar la caja, debes contar todo el efectivo y registrar los montos reales.
-                    </div>
+            <form method="POST" action="{{ url_for('caja.cerrar') }}" id="formCerrarCaja">
+                <div class="modal-body p-0">
+                    <div class="row g-0" style="min-height: 600px;">
+                        <!-- COLUMNA IZQUIERDA: SISTEMA -->
+                        <div class="col-md-6 bg-light border-end p-4">
+                            <h5 style="color: #0d6efd; margin-bottom: 20px;">
+                                <i class="fas fa-chart-bar"></i> SISTEMA (Esperado)
+                            </h5>
 
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <div class="card bg-light">
+                            <!-- Información de la caja -->
+                            <div class="mb-3">
+                                <small class="text-muted d-block">CAJA</small>
+                                <strong>{{ apertura_actual.caja.nombre }}</strong>
+                            </div>
+                            <div class="mb-4">
+                                <small class="text-muted d-block">CAJERO</small>
+                                <strong>{{ apertura_actual.cajero.nombre }}</strong>
+                            </div>
+
+                            <!-- Monto Inicial -->
+                            <div class="card border-0 bg-success bg-opacity-10 mb-4">
                                 <div class="card-body">
-                                    <h6 class="text-muted">SISTEMA</h6>
-                                    <p class="mb-1"><strong>Monto Inicial:</strong> Gs. {{ "{:,.0f}".format(apertura_actual.monto_inicial) }}</p>
-                                    <p class="mb-1"><strong>Efectivo Ventas:</strong> Gs. {{ "{:,.0f}".format(total_efectivo) }}</p>
-                                    <hr>
-                                    <p class="mb-0 h5"><strong>Total Sistema:</strong> Gs. {{ "{:,.0f}".format(apertura_actual.monto_inicial + total_efectivo) }}</p>
+                                    <small class="text-muted">Monto Inicial</small>
+                                    <h4 class="text-success mb-0">Gs. {{ "{:,.0f}".format(apertura_actual.monto_inicial) }}</h4>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <h6 class="text-muted">RESUMEN</h6>
-                                    <p class="mb-1"><strong>Tarjetas:</strong> Gs. {{ "{:,.0f}".format(total_tarjeta) }}</p>
-                                    <p class="mb-1"><strong>Otros:</strong> Gs. {{ "{:,.0f}".format(total_otros) }}</p>
-                                    <hr>
-                                    <p class="mb-0"><strong>Ventas Totales:</strong> {{ ventas_list|length }}</p>
-                                </div>
+
+                            <!-- Tabla de Totales por Forma de Pago -->
+                            <table class="table table-sm table-borderless mb-4">
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Efectivo Ventas:</strong></td>
+                                        <td class="text-end"><strong>Gs. {{ "{:,.0f}".format(total_efectivo) }}</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Tarjetas:</strong></td>
+                                        <td class="text-end"><strong>Gs. {{ "{:,.0f}".format(total_tarjeta) }}</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Transferencias:</strong></td>
+                                        <td class="text-end"><strong>Gs. {{ "{:,.0f}".format(total_transferencias | default(0)) }}</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Cheques:</strong></td>
+                                        <td class="text-end"><strong>Gs. {{ "{:,.0f}".format(total_cheques | default(0)) }}</strong></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <!-- Total Esperado -->
+                            <div class="alert alert-primary mb-0" style="font-size: 1.1rem;">
+                                <strong>TOTAL ESPERADO:</strong>
+                                <div style="font-size: 1.3rem; margin-top: 5px;">Gs. {{ "{:,.0f}".format(apertura_actual.monto_inicial + total_efectivo + total_tarjeta + total_transferencias | default(0) + total_cheques | default(0)) }}</div>
                             </div>
                         </div>
+
+                        <!-- COLUMNA DERECHA: ARQUEO -->
+                        <div class="col-md-6 p-4" style="background-color: #fff8f0;">
+                            <h5 style="color: #fd7e14; margin-bottom: 20px;">
+                                <i class="fas fa-calculator"></i> ARQUEO (Contar Real)
+                            </h5>
+
+                            <div class="alert alert-warning mb-4" style="font-size: 0.9rem;">
+                                <strong>Instrucciones:</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li>Contar todo el efectivo físico en caja</li>
+                                    <li>Verificar pagos por tarjeta con terminal/extracto</li>
+                                    <li>Validar transferencias y cheques</li>
+                                    <li>Completar los 4 campos a continuación</li>
+                                </ul>
+                            </div>
+
+                            <!-- Campo 1: Efectivo Contado -->
+                            <div class="mb-4">
+                                <label class="form-label"><strong>1. Total en Efectivo *</strong></label>
+                                <div class="input-group input-group-lg">
+                                    <span class="input-group-text">Gs.</span>
+                                    <input type="text" name="monto_efectivo" id="monto_efectivo" 
+                                           class="form-control form-control-lg" required
+                                           placeholder="Ej: 110000"
+                                           data-esperado="{{ apertura_actual.monto_inicial + total_efectivo }}"
+                                           value="">
+                                </div>
+                                <small class="text-muted d-block mt-2">
+                                    Esperado: Gs. {{ "{:,.0f}".format(apertura_actual.monto_inicial + total_efectivo) }}
+                                </small>
+                            </div>
+
+                            <!-- Campo 2: Tarjetas -->
+                            <div class="mb-4">
+                                <label class="form-label"><strong>2. Total en Tarjeta Crédito y Débito</strong></label>
+                                <div class="input-group input-group-lg">
+                                    <span class="input-group-text">Gs.</span>
+                                    <input type="text" name="monto_tarjeta" id="monto_tarjeta"
+                                           class="form-control form-control-lg"
+                                           placeholder="Ej: 20000"
+                                           data-esperado="{{ total_tarjeta }}"
+                                           value="">
+                                </div>
+                                <small class="text-muted d-block mt-2">
+                                    Esperado: Gs. {{ "{:,.0f}".format(total_tarjeta) }}
+                                </small>
+                            </div>
+
+                            <!-- Campo 3: Transferencias -->
+                            <div class="mb-4">
+                                <label class="form-label"><strong>3. Total en Transferencias</strong></label>
+                                <div class="input-group input-group-lg">
+                                    <span class="input-group-text">Gs.</span>
+                                    <input type="text" name="monto_transferencias" id="monto_transferencias"
+                                           class="form-control form-control-lg"
+                                           placeholder="Ej: 11000"
+                                           data-esperado="{{ total_transferencias | default(0) }}"
+                                           value="">
+                                </div>
+                                <small class="text-muted d-block mt-2">
+                                    Esperado: Gs. {{ "{:,.0f}".format(total_transferencias | default(0)) }}
+                                </small>
+                            </div>
+
+                            <!-- Campo 4: Cheques -->
+                            <div class="mb-4">
+                                <label class="form-label"><strong>4. Total en Cheques</strong></label>
+                                <div class="input-group input-group-lg">
+                                    <span class="input-group-text">Gs.</span>
+                                    <input type="text" name="monto_cheques" id="monto_cheques"
+                                           class="form-control form-control-lg"
+                                           placeholder="Ej: 10000"
+                                           data-esperado="{{ total_cheques | default(0) }}"
+                                           value="">
+                                </div>
+                                <small class="text-muted d-block mt-2">
+                                    Esperado: Gs. {{ "{:,.0f}".format(total_cheques | default(0)) }}
+                                </small>
+                            </div>
+
+                            <!-- RESUMEN Card -->
+                            <div class="card border-0 bg-white" style="border: 2px solid #fd7e14;">
+                                <div class="card-body">
+                                    <table class="table table-sm table-borderless mb-0">
+                                        <tr>
+                                            <td><strong>Total Sistema:</strong></td>
+                                            <td class="text-end"><strong id="total_sistema">Gs. {{ "{:,.0f}".format(apertura_actual.monto_inicial + total_efectivo + total_tarjeta + total_transferencias | default(0) + total_cheques | default(0)) }}</strong></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Total Real:</strong></td>
+                                            <td class="text-end"><strong id="total_real">Gs. 0</strong></td>
+                                        </tr>
+                                        <tr style="border-top: 1px solid #dee2e6;">
+                                            <td><strong>Diferencia:</strong></td>
+                                            <td class="text-end">
+                                                <span id="diferencia_badge" class="badge bg-secondary">Gs. 0</span>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Alert de Estado -->
+                            <div id="diferencia-alert" class="alert mt-3 mb-0" style="display:none;"></div>
+                        </div>
                     </div>
 
-                    <h6 class="border-bottom pb-2">Arqueo - Contar Efectivo Real</h6>
-
-                    <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label"><i class="fas fa-money-bill-wave text-success"></i> Efectivo Contado *</label>
-                            <input type="number" name="monto_efectivo" id="monto_efectivo" 
-                                   class="form-control" required min="0" step="1"
-                                   value="{{ apertura_actual.monto_inicial + total_efectivo }}">
-                            <small class="text-muted">Total en efectivo en caja</small>
-                        </div>
-
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label"><i class="fas fa-credit-card text-info"></i> Tarjetas (Referencia)</label>
-                            <input type="number" name="monto_tarjeta" class="form-control" 
-                                   min="0" step="1" value="{{ total_tarjeta }}" readonly>
-                            <small class="text-muted">No se cuenta físicamente</small>
-                        </div>
-
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label"><i class="fas fa-coins text-warning"></i> Otros (Referencia)</label>
-                            <input type="number" name="monto_otros" class="form-control" 
-                                   min="0" step="1" value="{{ total_otros }}" readonly>
-                            <small class="text-muted">Transferencias, cheques, etc.</small>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Observaciones de Cierre</label>
-                        <textarea name="observaciones_cierre" class="form-control" rows="2" 
+                    <!-- Observaciones (debajo) -->
+                    <div class="p-4 border-top" style="background-color: #f8f9fa;">
+                        <label class="form-label"><strong>Observaciones de Cierre</strong></label>
+                        <textarea name="observaciones_cierre" class="form-control" rows="3" 
                                   placeholder="Agregar cualquier nota relevante..."></textarea>
                     </div>
-
-                    <div id="diferencia-alert" class="alert alert-info" style="display:none;"></div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-danger">
+                    <button type="button" class="btn btn-danger" id="btnCerrarCaja">
                         <i class="fas fa-lock"></i> Cerrar Caja y Arquear
                     </button>
                 </div>
@@ -289,27 +456,139 @@
 </div>
 
 <script>
-// Calcular diferencia en tiempo real
-document.getElementById('monto_efectivo').addEventListener('input', function() {
-    const montoContado = parseFloat(this.value) || 0;
-    const montoSistema = {{ apertura_actual.monto_inicial + total_efectivo }};
-    const diferencia = montoContado - montoSistema;
-    
+// Valores esperados del sistema
+const valoresEsperados = {
+    efectivo: {{ apertura_actual.monto_inicial + total_efectivo }},
+    tarjeta: {{ total_tarjeta }},
+    transferencias: {{ total_transferencias | default(0) }},
+    cheques: {{ total_cheques | default(0) }}
+};
+
+valoresEsperados.total = valoresEsperados.efectivo + valoresEsperados.tarjeta + valoresEsperados.transferencias + valoresEsperados.cheques;
+
+// Formatear moneda a estilo Guaraní
+function formatearMoneda(monto) {
+    return 'Gs. ' + Math.abs(monto).toLocaleString('es-PY', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+}
+
+// Función para limpiar y parsear números (elimina puntos y comas)
+function limpiarNumero(valor) {
+    if (!valor) return 0;
+    // Eliminar todos los puntos y comas, luego parsear
+    const limpio = valor.toString().replace(/[.,]/g, '');
+    return parseInt(limpio) || 0;
+}
+
+// Función para calcular diferencias en tiempo real
+function calcularDiferencias() {
+    const montoEfectivo = limpiarNumero(document.getElementById('monto_efectivo').value);
+    const montoTarjeta = limpiarNumero(document.getElementById('monto_tarjeta').value);
+    const montoTransferencias = limpiarNumero(document.getElementById('monto_transferencias').value);
+    const montoCheques = limpiarNumero(document.getElementById('monto_cheques').value);
+
+    const totalReal = montoEfectivo + montoTarjeta + montoTransferencias + montoCheques;
+    const diferencia = totalReal - valoresEsperados.total;
+
+    // Actualizar Total Real
+    document.getElementById('total_real').textContent = formatearMoneda(totalReal);
+
+    // Actualizar badge de diferencia
+    const badge = document.getElementById('diferencia_badge');
+    badge.textContent = formatearMoneda(diferencia);
+
+    // Cambiar color de badge según diferencia
+    if (Math.abs(diferencia) < 1) {
+        badge.className = 'badge bg-success';
+        badge.textContent = 'Cuadrado';
+    } else if (diferencia > 0) {
+        badge.className = 'badge bg-info';
+    } else {
+        badge.className = 'badge bg-danger';
+    }
+
+    // Actualizar alert
     const alertDiv = document.getElementById('diferencia-alert');
-    
     if (Math.abs(diferencia) < 1) {
         alertDiv.style.display = 'none';
     } else {
         alertDiv.style.display = 'block';
-        
         if (diferencia > 0) {
-            alertDiv.className = 'alert alert-warning';
-            alertDiv.innerHTML = `<strong><i class="fas fa-exclamation-triangle"></i> Sobrante:</strong> Gs. ${diferencia.toLocaleString('es-PY')}`;
+            alertDiv.className = 'alert alert-info';
+            alertDiv.innerHTML = `<strong><i class="fas fa-arrow-up"></i> Sobrante:</strong> ${formatearMoneda(diferencia)}`;
         } else {
             alertDiv.className = 'alert alert-danger';
-            alertDiv.innerHTML = `<strong><i class="fas fa-exclamation-circle"></i> Faltante:</strong> Gs. ${Math.abs(diferencia).toLocaleString('es-PY')}`;
+            alertDiv.innerHTML = `<strong><i class="fas fa-arrow-down"></i> Faltante:</strong> ${formatearMoneda(Math.abs(diferencia))}`;
         }
     }
+}
+
+// Agregar listeners a todos los campos
+document.addEventListener('DOMContentLoaded', function() {
+    ['monto_efectivo', 'monto_tarjeta', 'monto_transferencias', 'monto_cheques'].forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.addEventListener('input', calcularDiferencias);
+        }
+    });
+});
+
+// Manejar el botón "Cerrar Caja y Arquear"
+document.getElementById('btnCerrarCaja').addEventListener('click', function() {
+    const form = document.getElementById('formCerrarCaja');
+    const formData = new FormData(form);
+    
+    // Mostrar indicador de procesamiento
+    const btn = this;
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Procesando...';
+    
+    // Enviar formulario de forma asincrónica
+    fetch(form.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        // Si es un PDF, descargar
+        if (response.headers.get('content-type').includes('application/pdf')) {
+            return response.blob().then(blob => {
+                // Crear descarga del PDF
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                
+                // Extraer nombre del archivo del header Content-Disposition
+                const contentDisposition = response.headers.get('content-disposition');
+                let filename = 'arqueo.pdf';
+                if (contentDisposition && contentDisposition.indexOf('attachment') !== -1) {
+                    const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+                    if (filenameMatch) {
+                        filename = filenameMatch[1];
+                    }
+                }
+                
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                // Esperar un momento y redirigir
+                setTimeout(() => {
+                    window.location.href = '{{ url_for("caja.estado") }}';
+                }, 500);
+            });
+        } else {
+            throw new Error('Respuesta inesperada del servidor');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al cerrar la caja: ' + error.message);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    });
 });
 </script>
 {% endif %}

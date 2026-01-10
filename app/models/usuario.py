@@ -21,9 +21,6 @@ class Usuario(UserMixin, db.Model):
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
     ultimo_acceso = db.Column(db.DateTime)
     
-    # Relaciones
-    empleado = db.relationship('Empleado', backref='usuario', uselist=False)
-    
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
     

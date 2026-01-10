@@ -2,15 +2,53 @@
 Rutas para la gestión de caja
 Incluye: apertura, cierre, arqueo y consulta de estado
 """
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file
 from flask_login import login_required, current_user
 from app import db
 from app.models import Caja, AperturaCaja, Venta, Pago, FormaPago
 from datetime import datetime
+from decimal import Decimal
 from sqlalchemy import func, and_
 from decimal import Decimal
+from app.utils.reports import generar_reporte_arqueo
+from app.models import ConfiguracionEmpresa
 
 bp = Blueprint('caja', __name__, url_prefix='/caja')
+
+def calcular_totales_por_forma_pago(apertura_id):
+    """
+    Calcula los totales esperados por forma de pago para una apertura de caja
+    """
+    ventas = Venta.query.filter_by(
+        apertura_caja_id=apertura_id,
+        estado='completada'
+    ).all()
+    
+    totales = {
+        'efectivo': Decimal('0'),
+        'tarjeta': Decimal('0'),
+        'transferencia': Decimal('0'),
+        'cheque': Decimal('0')
+    }
+    
+    # Agrupar pagos confirmados por forma de pago
+    for venta in ventas:
+        for pago in venta.pagos:
+            if pago.estado == 'confirmado':
+                forma_nombre = pago.forma_pago.nombre.lower() if pago.forma_pago else 'otros'
+                
+                if 'efectivo' in forma_nombre:
+                    totales['efectivo'] += pago.monto
+                elif 'tarjeta' in forma_nombre or 'débito' in forma_nombre or 'crédito' in forma_nombre:
+                    totales['tarjeta'] += pago.monto
+                elif 'transferencia' in forma_nombre:
+                    totales['transferencia'] += pago.monto
+                elif 'cheque' in forma_nombre:
+                    totales['cheque'] += pago.monto
+    
+    totales['total'] = totales['efectivo'] + totales['tarjeta'] + totales['transferencia'] + totales['cheque']
+    
+    return totales
 
 @bp.route('/estado')
 @login_required
@@ -18,6 +56,8 @@ def estado():
     """
     Muestra el estado actual de la caja del usuario
     """
+    from app.models import MovimientoCaja, PagoCompra
+    
     # Buscar si hay una caja abierta por el usuario actual
     apertura_actual = AperturaCaja.query.filter_by(
         cajero_id=current_user.id,
@@ -27,12 +67,17 @@ def estado():
     # Obtener todas las cajas disponibles
     cajas = Caja.query.filter_by(activo=True).all()
     
-    # Si hay apertura, calcular totales
+    # Si hay apertura, calcular totales por forma de pago
     total_ventas = Decimal('0')
     total_efectivo = Decimal('0')
     total_tarjeta = Decimal('0')
+    total_transferencias = Decimal('0')
+    total_cheques = Decimal('0')
     total_otros = Decimal('0')
     ventas_list = []
+    pagos_compras = []
+    total_egresos = Decimal('0')
+    monto_esperado = Decimal('0')
     
     if apertura_actual:
         # Ventas de esta apertura
@@ -43,16 +88,29 @@ def estado():
         
         total_ventas = sum(v.total for v in ventas_list)
         
-        # Calcular totales por forma de pago
-        for venta in ventas_list:
-            for pago in venta.pagos:
-                if pago.estado == 'confirmado':
-                    if pago.forma_pago_id == 1:  # Efectivo
-                        total_efectivo += pago.monto
-                    elif pago.forma_pago_id in [2, 6]:  # Tarjetas
-                        total_tarjeta += pago.monto
-                    else:
-                        total_otros += pago.monto
+        # Usar la función helper para calcular totales por forma de pago
+        totales = calcular_totales_por_forma_pago(apertura_actual.id)
+        total_efectivo = totales['efectivo']
+        total_tarjeta = totales['tarjeta']
+        total_transferencias = totales['transferencia']
+        total_cheques = totales['cheque']
+        total_otros = total_transferencias + total_cheques
+        
+        # Calcular egresos (compras pagadas desde caja chica)
+        egresos = MovimientoCaja.query.filter_by(
+            apertura_caja_id=apertura_actual.id,
+            tipo='egreso'
+        ).all()
+        total_egresos = sum(m.monto for m in egresos)
+        
+        # Obtener pagos de compras de esta apertura
+        pagos_compras = PagoCompra.query.filter_by(
+            apertura_caja_id=apertura_actual.id,
+            origen_pago='caja_chica'
+        ).order_by(PagoCompra.fecha_pago.desc()).all()
+        
+        # El monto esperado es: Inicial + Efectivo (ventas) - Egresos (compras)
+        monto_esperado = apertura_actual.monto_inicial + total_efectivo - total_egresos
     
     return render_template('caja/estado.html',
                          apertura_actual=apertura_actual,
@@ -60,8 +118,13 @@ def estado():
                          total_ventas=total_ventas,
                          total_efectivo=total_efectivo,
                          total_tarjeta=total_tarjeta,
+                         total_transferencias=total_transferencias,
+                         total_cheques=total_cheques,
                          total_otros=total_otros,
-                         ventas_list=ventas_list)
+                         ventas_list=ventas_list,
+                         pagos_compras=pagos_compras,
+                         total_egresos=total_egresos,
+                         monto_esperado=monto_esperado)
 
 @bp.route('/abrir', methods=['POST'])
 @login_required
@@ -81,7 +144,7 @@ def abrir():
             return redirect(url_for('caja.estado'))
         
         caja_id = request.form.get('caja_id')
-        monto_inicial = request.form.get('monto_inicial', 0)
+        monto_inicial = Decimal(str(request.form.get('monto_inicial', 0)))
         observaciones = request.form.get('observaciones', '')
         
         # Crear apertura
@@ -108,7 +171,8 @@ def abrir():
 @login_required
 def cerrar():
     """
-    Cierra la caja actual y realiza el arqueo
+    Procesa el arqueo desde el modal y cierra la caja completamente
+    Genera PDF del reporte de arqueo y lo descarga
     """
     try:
         apertura = AperturaCaja.query.filter_by(
@@ -120,60 +184,179 @@ def cerrar():
             flash('No tienes una caja abierta', 'warning')
             return redirect(url_for('caja.estado'))
         
-        # Obtener montos del arqueo del formulario
-        monto_efectivo_contado = Decimal(request.form.get('monto_efectivo', '0'))
-        monto_tarjeta_contado = Decimal(request.form.get('monto_tarjeta', '0'))
-        monto_otros_contado = Decimal(request.form.get('monto_otros', '0'))
+        # Función auxiliar para limpiar y convertir valores
+        def limpiar_monto(valor):
+            if not valor:
+                return 0
+            # Eliminar puntos y comas, convertir a int
+            limpio = str(valor).replace('.', '').replace(',', '')
+            try:
+                return int(limpio)
+            except:
+                return 0
+        
+        # Obtener los valores del formulario del modal
+        monto_efectivo_real = limpiar_monto(request.form.get('monto_efectivo', 0))
+        monto_tarjeta_real = limpiar_monto(request.form.get('monto_tarjeta', 0))
+        monto_transferencias_real = limpiar_monto(request.form.get('monto_transferencias', 0))
+        monto_cheques_real = limpiar_monto(request.form.get('monto_cheques', 0))
         observaciones_cierre = request.form.get('observaciones_cierre', '')
         
-        # Calcular el total contado
-        monto_final = monto_efectivo_contado + monto_tarjeta_contado + monto_otros_contado
+        # Calcular totales esperados por forma de pago
+        totales = calcular_totales_por_forma_pago(apertura.id)
         
-        # Calcular el total del sistema
-        ventas = Venta.query.filter_by(
-            apertura_caja_id=apertura.id,
-            estado='completada'
-        ).all()
+        # Guardar valores en la apertura
+        apertura.monto_efectivo_real = monto_efectivo_real
+        apertura.monto_tarjeta_real = monto_tarjeta_real
+        apertura.monto_transferencias_real = monto_transferencias_real
+        apertura.monto_cheques_real = monto_cheques_real
         
-        monto_sistema = apertura.monto_inicial
-        for venta in ventas:
-            for pago in venta.pagos:
-                if pago.estado == 'confirmado' and pago.forma_pago_id == 1:  # Solo efectivo
-                    monto_sistema += pago.monto
+        apertura.monto_efectivo_esperado = totales['efectivo']
+        apertura.monto_tarjeta_esperado = totales['tarjeta']
+        apertura.monto_transferencias_esperado = totales['transferencia']
+        apertura.monto_cheques_esperado = totales['cheque']
         
-        # Calcular diferencia
-        diferencia = monto_efectivo_contado - monto_sistema
+        # Calcular totales reales y esperados
+        total_real = monto_efectivo_real + monto_tarjeta_real + monto_transferencias_real + monto_cheques_real
+        total_esperado = totales['total']
+        diferencia_total = total_real - total_esperado
         
-        # Actualizar apertura
+        apertura.observaciones_cierre = observaciones_cierre
+        apertura.diferencia_total = diferencia_total
+        apertura.estado = 'cerrada'
         apertura.fecha_cierre = datetime.now()
-        apertura.monto_final = monto_final
-        apertura.monto_sistema = monto_sistema
-        apertura.diferencia = diferencia
-        apertura.estado = 'cerrado'
-        
-        # Agregar observaciones si hay diferencia
-        if diferencia != 0:
-            obs_dif = f"\n[DIFERENCIA: Gs. {diferencia:,.0f}]"
-            apertura.observaciones = (apertura.observaciones or '') + obs_dif
-        
-        if observaciones_cierre:
-            apertura.observaciones = (apertura.observaciones or '') + f"\n{observaciones_cierre}"
         
         db.session.commit()
         
-        if diferencia == 0:
-            flash('Caja cerrada exitosamente. ¡Arqueo cuadrado!', 'success')
-        elif abs(diferencia) <= 1000:
-            flash(f'Caja cerrada. Diferencia menor: Gs. {diferencia:,.0f}', 'info')
-        else:
-            flash(f'Caja cerrada con diferencia: Gs. {diferencia:,.0f}', 'warning')
+        # ===== GENERAR PDF =====
+        try:
+            # Obtener configuración de la empresa
+            empresa = ConfiguracionEmpresa.query.first()
+            empresa_config = {
+                'nombre': empresa.nombre_empresa if empresa else 'JUGUETERÍA',
+                'subtitulo': 'El Mundo Feliz',
+                'ruc': empresa.ruc if empresa else 'N/A',
+                'direccion': empresa.direccion if empresa else ''
+            }
+            
+            # Generar PDF
+            # Los totales esperados deben incluir el monto_inicial en efectivo
+            totales_con_inicial = totales.copy()
+            totales_con_inicial['efectivo'] = apertura.monto_inicial + totales['efectivo']
+            totales_con_inicial['total'] = apertura.monto_inicial + totales['total']
+            
+            pdf_buffer = generar_reporte_arqueo(apertura, totales_con_inicial, empresa_config)
+            
+            # Nombre del archivo
+            fecha_str = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f"Arqueo_Caja_{apertura.caja.nombre}_{fecha_str}.pdf"
+            
+            # Mensaje de éxito
+            if abs(diferencia_total) < 1:
+                flash(f'✓ Caja cerrada correctamente. Arqueo cuadrado.', 'success')
+            elif diferencia_total > 0:
+                flash(f'⚠ Caja cerrada con sobrante: Gs. {diferencia_total:,.0f}', 'warning')
+            else:
+                flash(f'⚠ Caja cerrada con faltante: Gs. {abs(diferencia_total):,.0f}', 'warning')
+            
+            # Descargar PDF
+            return send_file(
+                pdf_buffer,
+                as_attachment=True,
+                download_name=filename,
+                mimetype='application/pdf'
+            )
         
-        return redirect(url_for('caja.ver_apertura', id=apertura.id))
-        
+        except Exception as pdf_error:
+            # Si hay error en el PDF, redirigir igual pero con advertencia
+            flash(f'⚠ Caja cerrada pero error al generar PDF: {str(pdf_error)}', 'warning')
+            return redirect(url_for('caja.estado'))
+    
     except Exception as e:
         db.session.rollback()
         flash(f'Error al cerrar caja: {str(e)}', 'danger')
         return redirect(url_for('caja.estado'))
+
+@bp.route('/realizar-arqueo/<int:id>', methods=['GET', 'POST'])
+@login_required
+def realizar_arqueo(id):
+    """
+    Formulario para realizar arqueo detallado de caja
+    GET: muestra el formulario con los totales esperados
+    POST: guarda los totales reales contados y cierra la caja
+    """
+    apertura = AperturaCaja.query.get_or_404(id)
+    
+    # Verificar permisos
+    if apertura.cajero_id != current_user.id and current_user.rol != 'admin':
+        flash('No tienes permiso para arquear esta caja', 'danger')
+        return redirect(url_for('caja.estado'))
+    
+    if apertura.estado != 'en_arqueo':
+        flash('Esta caja no está en proceso de arqueo', 'warning')
+        return redirect(url_for('caja.ver_apertura', id=id))
+    
+    if request.method == 'GET':
+        # Calcular totales esperados por forma de pago
+        totales_sistema = calcular_totales_por_forma_pago(apertura.id)
+        
+        return render_template('caja/realizar_arqueo.html',
+                             apertura=apertura,
+                             totales_sistema=totales_sistema)
+    
+    else:  # POST
+        try:
+            # Recalcular totales esperados para guardarlos
+            totales_sistema = calcular_totales_por_forma_pago(apertura.id)
+            
+            # Obtener valores contados del formulario
+            monto_efectivo_real = Decimal(request.form.get('monto_efectivo_real', '0'))
+            monto_tarjeta_real = Decimal(request.form.get('monto_tarjeta_real', '0'))
+            monto_transferencias_real = Decimal(request.form.get('monto_transferencias_real', '0'))
+            monto_cheques_real = Decimal(request.form.get('monto_cheques_real', '0'))
+            observaciones = request.form.get('observaciones', '')
+            
+            # Guardar valores reales
+            apertura.monto_efectivo_real = monto_efectivo_real
+            apertura.monto_tarjeta_real = monto_tarjeta_real
+            apertura.monto_transferencias_real = monto_transferencias_real
+            apertura.monto_cheques_real = monto_cheques_real
+            
+            # Guardar valores esperados
+            apertura.monto_efectivo_esperado = totales_sistema['efectivo']
+            apertura.monto_tarjeta_esperado = totales_sistema['tarjeta']
+            apertura.monto_transferencias_esperado = totales_sistema['transferencia']
+            apertura.monto_cheques_esperado = totales_sistema['cheque']
+            
+            # Calcular total real
+            total_real = monto_efectivo_real + monto_tarjeta_real + monto_transferencias_real + monto_cheques_real
+            apertura.monto_final = total_real
+            
+            # Cerrar la caja
+            apertura.fecha_cierre = datetime.now()
+            apertura.estado = 'cerrada'
+            
+            if observaciones:
+                apertura.observaciones = (apertura.observaciones or '') + f"\n{observaciones}"
+            
+            db.session.commit()
+            
+            # Calcular diferencia total
+            diferencia_total = total_real - (apertura.monto_sistema or Decimal('0'))
+            
+            if diferencia_total == 0:
+                flash('Caja cerrada exitosamente. ¡Arqueo cuadrado!', 'success')
+            elif abs(diferencia_total) <= 1000:
+                flash(f'Caja cerrada. Diferencia menor: Gs. {diferencia_total:,.0f}', 'info')
+            else:
+                flash(f'Caja cerrada con diferencia: Gs. {diferencia_total:,.0f}', 'warning')
+            
+            return redirect(url_for('caja.ver_apertura', id=apertura.id))
+        
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al guardar arqueo: {str(e)}', 'danger')
+            return redirect(url_for('caja.realizar_arqueo', id=id))
 
 @bp.route('/ver/<int:id>')
 @login_required
@@ -194,20 +377,13 @@ def ver_apertura(id):
         estado='completada'
     ).order_by(Venta.fecha_venta.desc()).all()
     
-    # Calcular totales por forma de pago
-    total_efectivo = Decimal('0')
-    total_tarjeta = Decimal('0')
-    total_otros = Decimal('0')
+    # Calcular total de caja (todos los pagos confirmados)
+    total_caja = Decimal('0')
     
     for venta in ventas:
         for pago in venta.pagos:
             if pago.estado == 'confirmado':
-                if pago.forma_pago_id == 1:  # Efectivo
-                    total_efectivo += pago.monto
-                elif pago.forma_pago_id in [2, 6]:  # Tarjetas
-                    total_tarjeta += pago.monto
-                else:
-                    total_otros += pago.monto
+                total_caja += pago.monto
     
     total_ventas = sum(v.total for v in ventas)
     
@@ -215,9 +391,7 @@ def ver_apertura(id):
                          apertura=apertura,
                          ventas=ventas,
                          total_ventas=total_ventas,
-                         total_efectivo=total_efectivo,
-                         total_tarjeta=total_tarjeta,
-                         total_otros=total_otros)
+                         total_caja=total_caja)
 
 @bp.route('/historial')
 @login_required

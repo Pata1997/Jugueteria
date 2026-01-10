@@ -166,6 +166,11 @@ class Compra(db.Model):
     estado = db.Column(db.String(20), default='registrada')  # registrada, pagada, parcial_pagada
     stock_actualizado = db.Column(db.Boolean, default=False)
     
+    # CRÉDITO (opcional cuando la compra se deja a crédito)
+    plazo_credito_dias = db.Column(db.Integer, nullable=True)
+    fecha_vencimiento_credito = db.Column(db.Date, nullable=True)
+    observaciones_credito = db.Column(db.Text, nullable=True)
+    
     # AUDITORÍA
     fecha_registro = db.Column(db.DateTime, default=datetime.utcnow)
     observaciones = db.Column(db.Text)

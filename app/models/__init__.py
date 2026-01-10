@@ -15,7 +15,6 @@ from app.models.compra import (
     PresupuestoProveedorDetalle, OrdenCompra, OrdenCompraDetalle,
     Compra, CompraDetalle, CuentaPorPagar, PagoProveedor, PagoCompra, MovimientoCaja
 )
-from app.models.empleado import Empleado, Vacacion, Permiso, Asistencia, HorarioAtencion
 from app.models.configuracion import ConfiguracionEmpresa
 
 __all__ = [
@@ -29,6 +28,5 @@ __all__ = [
     'Proveedor', 'PedidoCompra', 'PedidoCompraDetalle', 'PresupuestoProveedor',
     'PresupuestoProveedorDetalle', 'OrdenCompra', 'OrdenCompraDetalle',
     'Compra', 'CompraDetalle', 'CuentaPorPagar', 'PagoProveedor', 'PagoCompra', 'MovimientoCaja',
-    'Empleado', 'Vacacion', 'Permiso', 'Asistencia', 'HorarioAtencion',
     'ConfiguracionEmpresa'
 ]

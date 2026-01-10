@@ -57,45 +57,116 @@
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-warning">
                 <h5 class="mb-0">
-                    <i class="fas fa-calculator"></i> Arqueo
+                    <i class="fas fa-calculator"></i> Arqueo Realizado
                 </h5>
             </div>
             <div class="card-body">
                 <table class="table table-sm">
                     <tr>
-                        <td><strong>Monto Sistema:</strong></td>
-                        <td class="text-end">Gs. {{ "{:,.0f}".format(apertura.monto_sistema) }}</td>
+                        <td><strong>Total Esperado (Sistema):</strong></td>
+                        <td class="text-end">Gs. {{ "{:,.0f}".format(apertura.monto_sistema or 0) }}</td>
                     </tr>
                     <tr>
-                        <td><strong>Efectivo Contado:</strong></td>
-                        <td class="text-end">Gs. {{ "{:,.0f}".format(apertura.monto_efectivo) }}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Tarjetas:</strong></td>
-                        <td class="text-end">Gs. {{ "{:,.0f}".format(apertura.monto_tarjeta or 0) }}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Otros:</strong></td>
-                        <td class="text-end">Gs. {{ "{:,.0f}".format(apertura.monto_otros or 0) }}</td>
+                        <td><strong>Total Real (Contado):</strong></td>
+                        <td class="text-end">Gs. {{ "{:,.0f}".format(apertura.monto_final or 0) }}</td>
                     </tr>
                     <tr class="table-light">
-                        <td><strong>Diferencia:</strong></td>
+                        <td><strong>Diferencia Total:</strong></td>
                         <td class="text-end">
-                            {% set diferencia = apertura.monto_efectivo - apertura.monto_sistema %}
-                            {% if diferencia > 0 %}
-                                <span class="text-warning">+Gs. {{ "{:,.0f}".format(diferencia) }}</span>
-                            {% elif diferencia < 0 %}
-                                <span class="text-danger">Gs. {{ "{:,.0f}".format(diferencia) }}</span>
+                            {% set diferencia_total = (apertura.monto_final or 0) - (apertura.monto_sistema or 0) %}
+                            {% if diferencia_total > 0 %}
+                                <span class="text-success"><i class="fas fa-plus-circle"></i> Gs. {{ "{:,.0f}".format(diferencia_total) }} (Sobrante)</span>
+                            {% elif diferencia_total < 0 %}
+                                <span class="text-danger"><i class="fas fa-minus-circle"></i> Gs. {{ "{:,.0f}".format(diferencia_total) }} (Faltante)</span>
                             {% else %}
-                                <span class="text-success">Cuadrado ✓</span>
+                                <span class="text-success"><i class="fas fa-check-circle"></i> Cuadrado ✓</span>
                             {% endif %}
                         </td>
                     </tr>
                 </table>
-                
-                <a href="{{ url_for('caja.arqueo', apertura_id=apertura.id) }}" class="btn btn-sm btn-outline-primary w-100">
-                    <i class="fas fa-file-alt"></i> Ver Arqueo Detallado
-                </a>
+
+                <!-- DESGLOSE POR FORMA DE PAGO -->
+                <hr>
+                <h6 class="mb-3"><i class="fas fa-list"></i> Desglose por Forma de Pago</h6>
+                <table class="table table-sm table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Forma de Pago</th>
+                            <th class="text-end">Esperado</th>
+                            <th class="text-end">Real</th>
+                            <th class="text-end">Diferencia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><i class="fas fa-money-bill-wave text-success"></i> Efectivo</td>
+                            <td class="text-end">Gs. {{ "{:,.0f}".format(apertura.monto_efectivo_esperado or 0) }}</td>
+                            <td class="text-end"><strong>Gs. {{ "{:,.0f}".format(apertura.monto_efectivo_real or 0) }}</strong></td>
+                            <td class="text-end">
+                                {% set dif_ef = (apertura.monto_efectivo_real or 0) - (apertura.monto_efectivo_esperado or 0) %}
+                                {% if dif_ef > 0 %}
+                                    <span class="text-success">+Gs. {{ "{:,.0f}".format(dif_ef) }}</span>
+                                {% elif dif_ef < 0 %}
+                                    <span class="text-danger">Gs. {{ "{:,.0f}".format(dif_ef) }}</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><i class="fas fa-credit-card text-info"></i> Tarjetas</td>
+                            <td class="text-end">Gs. {{ "{:,.0f}".format(apertura.monto_tarjeta_esperado or 0) }}</td>
+                            <td class="text-end"><strong>Gs. {{ "{:,.0f}".format(apertura.monto_tarjeta_real or 0) }}</strong></td>
+                            <td class="text-end">
+                                {% set dif_taj = (apertura.monto_tarjeta_real or 0) - (apertura.monto_tarjeta_esperado or 0) %}
+                                {% if dif_taj > 0 %}
+                                    <span class="text-success">+Gs. {{ "{:,.0f}".format(dif_taj) }}</span>
+                                {% elif dif_taj < 0 %}
+                                    <span class="text-danger">Gs. {{ "{:,.0f}".format(dif_taj) }}</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><i class="fas fa-exchange-alt text-secondary"></i> Transferencias</td>
+                            <td class="text-end">Gs. {{ "{:,.0f}".format(apertura.monto_transferencias_esperado or 0) }}</td>
+                            <td class="text-end"><strong>Gs. {{ "{:,.0f}".format(apertura.monto_transferencias_real or 0) }}</strong></td>
+                            <td class="text-end">
+                                {% set dif_trans = (apertura.monto_transferencias_real or 0) - (apertura.monto_transferencias_esperado or 0) %}
+                                {% if dif_trans > 0 %}
+                                    <span class="text-success">+Gs. {{ "{:,.0f}".format(dif_trans) }}</span>
+                                {% elif dif_trans < 0 %}
+                                    <span class="text-danger">Gs. {{ "{:,.0f}".format(dif_trans) }}</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><i class="fas fa-file-alt text-warning"></i> Cheques</td>
+                            <td class="text-end">Gs. {{ "{:,.0f}".format(apertura.monto_cheques_esperado or 0) }}</td>
+                            <td class="text-end"><strong>Gs. {{ "{:,.0f}".format(apertura.monto_cheques_real or 0) }}</strong></td>
+                            <td class="text-end">
+                                {% set dif_chq = (apertura.monto_cheques_real or 0) - (apertura.monto_cheques_esperado or 0) %}
+                                {% if dif_chq > 0 %}
+                                    <span class="text-success">+Gs. {{ "{:,.0f}".format(dif_chq) }}</span>
+                                {% elif dif_chq < 0 %}
+                                    <span class="text-danger">Gs. {{ "{:,.0f}".format(dif_chq) }}</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                {% if apertura.observaciones %}
+                <div class="alert alert-light mt-3">
+                    <strong>Observaciones:</strong>
+                    <p class="mb-0 mt-2">{{ apertura.observaciones }}</p>
+                </div>
+                {% endif %}
             </div>
         </div>
         {% endif %}
@@ -131,30 +202,21 @@
                 </div>
 
                 <div class="row">
-                    <div class="col-md-4">
-                        <div class="card bg-success text-white">
-                            <div class="card-body text-center">
-                                <i class="fas fa-money-bill-wave fa-2x mb-2"></i>
-                                <h6>EFECTIVO</h6>
-                                <h4 class="mb-0">Gs. {{ "{:,.0f}".format(total_efectivo) }}</h4>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card bg-info text-white">
-                            <div class="card-body text-center">
-                                <i class="fas fa-credit-card fa-2x mb-2"></i>
-                                <h6>TARJETAS</h6>
-                                <h4 class="mb-0">Gs. {{ "{:,.0f}".format(total_tarjeta) }}</h4>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="card bg-warning text-white">
+                    <div class="col-md-6">
+                        <div class="card bg-primary text-white">
                             <div class="card-body text-center">
                                 <i class="fas fa-coins fa-2x mb-2"></i>
-                                <h6>OTROS</h6>
-                                <h4 class="mb-0">Gs. {{ "{:,.0f}".format(total_otros) }}</h4>
+                                <h6>TOTAL DE VENTAS</h6>
+                                <h4 class="mb-0">Gs. {{ "{:,.0f}".format(total_caja) }}</h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card bg-secondary text-white">
+                            <div class="card-body text-center">
+                                <i class="fas fa-chart-bar fa-2x mb-2"></i>
+                                <h6>MONTO INICIAL</h6>
+                                <h4 class="mb-0">Gs. {{ "{:,.0f}".format(apertura.monto_inicial) }}</h4>
                             </div>
                         </div>
                     </div>

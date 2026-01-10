@@ -4,6 +4,7 @@ from app import db
 from app.models import (Caja, AperturaCaja, Venta, VentaDetalle, Pago, 
                         NotaCredito, NotaDebito, Cliente, Producto, OrdenServicio)
 from datetime import datetime, date
+from decimal import Decimal
 
 bp = Blueprint('ventas', __name__, url_prefix='/ventas')
 
@@ -73,7 +74,7 @@ def cerrar_caja(id):
     
     if request.method == 'POST':
         try:
-            apertura.monto_final = request.form.get('monto_final')
+            apertura.monto_final = Decimal(str(request.form.get('monto_final') or 0))
             apertura.fecha_cierre = datetime.utcnow()
             apertura.estado = 'cerrado'
             apertura.observaciones = request.form.get('observaciones')
@@ -329,18 +330,18 @@ def facturar(id):
         flash('Esta venta ya está facturada/pagada', 'warning')
         return redirect(url_for('ventas.ver', id=id))
     
+    # Verificar apertura de caja SIEMPRE (GET y POST)
+    apertura = AperturaCaja.query.filter_by(
+        cajero_id=current_user.id,
+        estado='abierto'
+    ).first()
+    
+    if not apertura:
+        flash('Debes abrir una caja antes de facturar', 'danger')
+        return redirect(url_for('caja.estado'))
+    
     if request.method == 'POST':
         try:
-            # Verificar apertura de caja
-            apertura = AperturaCaja.query.filter_by(
-                cajero_id=current_user.id,
-                estado='abierto'
-            ).first()
-            
-            if not apertura:
-                flash('Debe abrir una caja para facturar', 'warning')
-                return redirect(url_for('ventas.apertura_caja'))
-            
             # Generar número de factura real
             from app.models import ConfiguracionEmpresa
             config = ConfiguracionEmpresa.get_config()

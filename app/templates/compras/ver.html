@@ -160,7 +160,7 @@
                             {% if compra.tipo == 'producto' and detalle.producto %}
                             <td>{{ detalle.producto.codigo }}</td>
                             <td>{{ detalle.producto.nombre }}</td>
-                            <td class="text-center">{{ detalle.cantidad }}</td>
+                            <td class="text-center">{{ "{:.0f}".format(detalle.cantidad) }}</td>
                             <td class="text-end">Gs. {{ "{:,.0f}".format(detalle.precio_unitario) }}</td>
                             <td class="text-end">Gs. {{ "{:,.0f}".format(detalle.subtotal) }}</td>
                             {% else %}
@@ -243,7 +243,7 @@
                         <div class="input-group">
                             <span class="input-group-text">Gs.</span>
                             <input type="number" class="form-control" id="monto" name="monto" 
-                                   value="{{ compra.total }}" min="0" step="0.01" required>
+                                   value="{{ "{:.0f}".format(compra.total) }}" min="0" step="1" required>
                         </div>
                     </div>
 
@@ -276,6 +276,31 @@
                         </div>
                     </div>
 
+                    <!-- CAMPOS DE CRÉDITO -->
+                    <div id="grupo_credito" class="mb-3" style="display: none;">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <label class="form-label">Plazo de crédito (días)</label>
+                                <select class="form-select" name="plazo_credito_dias" id="plazo_credito_dias">
+                                    <option value="0">Seleccionar...</option>
+                                    <option value="15">15</option>
+                                    <option value="30">30</option>
+                                    <option value="45">45</option>
+                                    <option value="60">60</option>
+                                    <option value="90">90</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Fecha de vencimiento</label>
+                                <input type="date" class="form-control" name="fecha_vencimiento_credito" id="fecha_vencimiento_credito" readonly>
+                            </div>
+                            <div class="col-md-12 mt-2">
+                                <label class="form-label">Observaciones de crédito</label>
+                                <textarea class="form-control" name="observaciones_credito" rows="2" placeholder="Acordado en 3 pagos, etc."></textarea>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="mb-3">
                         <label for="referencia" class="form-label">Referencia</label>
                         <input type="text" class="form-control" id="referencia" name="referencia">
@@ -292,4 +317,42 @@
         </div>
     </div>
 </div>
+
+<script>
+// Mostrar/ocultar campos de crédito y controlar monto
+function toggleCreditoFields() {
+    const origenCredito = document.getElementById('origen_credito').checked;
+    const grupo = document.getElementById('grupo_credito');
+    const monto = document.getElementById('monto');
+    if (origenCredito) {
+        grupo.style.display = '';
+        monto.value = 0;
+        monto.setAttribute('readonly', 'readonly');
+    } else {
+        grupo.style.display = 'none';
+        monto.removeAttribute('readonly');
+        if (!monto.value || parseInt(monto.value) === 0) {
+            monto.value = {{ "{:.0f}".format(compra.total) }};
+        }
+    }
+}
+['origen_caja','origen_otra','origen_credito'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', toggleCreditoFields);
+});
+toggleCreditoFields();
+
+// Calcular fecha de vencimiento desde plazo
+document.getElementById('plazo_credito_dias').addEventListener('change', function() {
+    const dias = parseInt(this.value || '0');
+    const inputFecha = document.getElementById('fecha_vencimiento_credito');
+    if (!dias) { inputFecha.value=''; return; }
+    const hoy = new Date();
+    hoy.setDate(hoy.getDate() + dias);
+    const yyyy = hoy.getFullYear();
+    const mm = String(hoy.getMonth()+1).padStart(2,'0');
+    const dd = String(hoy.getDate()).padStart(2,'0');
+    inputFecha.value = `${yyyy}-${mm}-${dd}`;
+});
+</script>
 {% endblock %}

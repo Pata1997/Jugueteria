@@ -145,7 +145,7 @@
                         <div class="input-group">
                             <span class="input-group-text">Gs.</span>
                             <input type="number" class="form-control" id="monto" name="monto" 
-                                   min="0" step="0.01" required>
+                                   min="0" step="1" required>
                         </div>
                         <small class="form-text text-muted">Puedes pagar el total o un monto parcial.</small>
                     </div>
@@ -193,7 +193,30 @@
                                 <small class="d-block text-muted">No registra pago. La compra queda pendiente para pagar después.</small>
                             </label>
                             <div id="opcionCredito" class="d-none mt-2">
-                                <small class="text-danger">⚠ Se creará una Cuenta por Pagar que podrás liquidar más tarde.</small>
+                                <small class="text-danger d-block mb-2">⚠ Se creará una Cuenta por Pagar que podrás liquidar más tarde.</small>
+                                <div id="grupo_credito" class="border rounded p-2 bg-light">
+                                    <div class="row g-2">
+                                        <div class="col-md-4">
+                                            <label class="form-label">Plazo de crédito (días)</label>
+                                            <select class="form-select" name="plazo_credito_dias" id="plazo_credito_dias">
+                                                <option value="">Seleccionar...</option>
+                                                <option value="15">15</option>
+                                                <option value="30">30</option>
+                                                <option value="45">45</option>
+                                                <option value="60">60</option>
+                                                <option value="90">90</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Fecha de vencimiento</label>
+                                            <input type="date" class="form-control" name="fecha_vencimiento_credito" id="fecha_vencimiento_credito" readonly>
+                                        </div>
+                                        <div class="col-md-12 mt-2">
+                                            <label class="form-label">Observaciones de crédito</label>
+                                            <textarea class="form-control" name="observaciones_credito" rows="2" placeholder="Acordado en 3 pagos, etc."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -240,9 +263,9 @@ function prepararModalPagar(compraId, total) {
         .then(r => r.json())
         .then(data => {
             document.getElementById('numeroCompra').textContent = data.numero_compra;
-            document.getElementById('totalCompra').textContent = parseFloat(data.total).toLocaleString('es-PY', {minimumFractionDigits: 2});
+            document.getElementById('totalCompra').textContent = Math.round(parseFloat(data.total)).toLocaleString('es-PY');
             document.getElementById('compra_id_hidden').value = compraId;
-            document.getElementById('monto').value = parseFloat(data.total).toFixed(2);
+            document.getElementById('monto').value = Math.round(parseFloat(data.total));
         })
         .catch(e => console.error('Error:', e));
 }
@@ -254,10 +277,15 @@ function mostrarOpciones(opcion) {
     
     if (opcion === 'caja') {
         document.getElementById('opcionCaja').classList.remove('d-none');
+        document.getElementById('monto').removeAttribute('readonly');
     } else if (opcion === 'otra') {
         document.getElementById('opcionOtra').classList.remove('d-none');
+        document.getElementById('monto').removeAttribute('readonly');
     } else if (opcion === 'credito') {
         document.getElementById('opcionCredito').classList.remove('d-none');
+        const monto = document.getElementById('monto');
+        monto.value = 0;
+        monto.setAttribute('readonly', 'readonly');
     }
 }
 
@@ -285,5 +313,21 @@ document.getElementById('formPagar').addEventListener('submit', function(e) {
     this.action = `/compras/${compraActual}/pagar`;
     this.submit();
 });
+
+// Calcular fecha de vencimiento a partir del plazo seleccionado
+const selPlazo = document.getElementById('plazo_credito_dias');
+if (selPlazo) {
+    selPlazo.addEventListener('change', function() {
+        const dias = parseInt(this.value || '0');
+        const inputFecha = document.getElementById('fecha_vencimiento_credito');
+        if (!dias) { inputFecha.value=''; return; }
+        const hoy = new Date();
+        hoy.setDate(hoy.getDate() + dias);
+        const yyyy = hoy.getFullYear();
+        const mm = String(hoy.getMonth()+1).padStart(2,'0');
+        const dd = String(hoy.getDate()).padStart(2,'0');
+        inputFecha.value = `${yyyy}-${mm}-${dd}`;
+    });
+}
 </script>
 {% endblock %}
