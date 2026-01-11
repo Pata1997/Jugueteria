@@ -342,6 +342,7 @@ def facturar(id):
     
     if request.method == 'POST':
         try:
+            from app.models.venta import FormaPago
             # Generar número de factura real
             from app.models import ConfiguracionEmpresa
             config = ConfiguracionEmpresa.get_config()
@@ -363,20 +364,43 @@ def facturar(id):
                 return redirect(url_for('ventas.facturar', id=id))
             
             total_pagado = 0
+            total_efectivo_entregado = 0
+            efectivo_forma_ids = [fp.id for fp in FormaPago.query.filter(FormaPago.nombre.ilike('%efectivo%')).all()]
+            print(f"[DEBUG] efectivo_forma_ids: {efectivo_forma_ids}")
+            print(f"[DEBUG] pagos_list: {pagos_list}")
             for pag in pagos_list:
-                pago = Pago(
-                    venta_id=venta.id,
-                    forma_pago_id=pag.get('forma_pago_id'),
-                    monto=pag['monto'],
-                    referencia=pag.get('referencia'),
-                    banco=pag.get('banco'),
-                    estado='confirmado'
-                )
-                db.session.add(pago)
-                total_pagado += float(pag['monto'])
-            
-            # Calcular vuelto
-            vuelto = max(0, total_pagado - float(venta.total))
+                monto_pago = float(pag['monto'])
+                forma_pago_id = int(pag.get('forma_pago_id')) if pag.get('forma_pago_id') is not None else None
+                print(f"[DEBUG] Procesando pago: {pag}, monto_pago: {monto_pago}, forma_pago_id: {forma_pago_id}")
+                if forma_pago_id in efectivo_forma_ids:
+                    total_efectivo_entregado += monto_pago
+                    neto_efectivo = min(monto_pago, float(venta.total) - total_pagado)
+                    print(f"[DEBUG] Efectivo entregado: {monto_pago}, neto_efectivo: {neto_efectivo}, total_efectivo_entregado: {total_efectivo_entregado}")
+                    pago = Pago(
+                        venta_id=venta.id,
+                        forma_pago_id=forma_pago_id,
+                        monto=neto_efectivo,
+                        referencia=pag.get('referencia'),
+                        banco=pag.get('banco'),
+                        estado='confirmado'
+                    )
+                    db.session.add(pago)
+                    total_pagado += neto_efectivo
+                else:
+                    pago = Pago(
+                        venta_id=venta.id,
+                        forma_pago_id=forma_pago_id,
+                        monto=monto_pago,
+                        referencia=pag.get('referencia'),
+                        banco=pag.get('banco'),
+                        estado='confirmado'
+                    )
+                    db.session.add(pago)
+                    total_pagado += monto_pago
+                print(f"[DEBUG] total_pagado: {total_pagado}")
+            # Calcular vuelto usando el total de efectivo entregado
+            vuelto = max(0, total_efectivo_entregado - float(venta.total))
+            print(f"[DEBUG] total_efectivo_entregado: {total_efectivo_entregado}, venta.total: {venta.total}, vuelto: {vuelto}")
             
             # Actualizar estado de pago
             venta.actualizar_estado_pago()
@@ -392,6 +416,7 @@ def facturar(id):
             session['venta_id'] = venta.id
             session['numero_factura'] = numero_factura
             session['apertura_caja_id'] = apertura.id
+            print(f"[DEBUG] session vuelto: {session.get('vuelto')}, venta_id: {session.get('venta_id')}, numero_factura: {session.get('numero_factura')}, apertura_caja_id: {session.get('apertura_caja_id')}")
             
             return redirect(url_for('ventas.confirmar_vuelto'))
             
@@ -442,6 +467,12 @@ def confirmar_vuelto():
     from flask import session
     
     vuelto = session.pop('vuelto', 0)
+    print(f"[DEBUG] confirmar_vuelto - vuelto recuperado de session: {vuelto}")
+    try:
+        vuelto = float(vuelto)
+    except Exception as e:
+        print(f"[DEBUG] Error convirtiendo vuelto a float: {e}")
+        vuelto = 0
     venta_id = session.pop('venta_id', None)
     numero_factura = session.pop('numero_factura', None)
     apertura_caja_id = session.pop('apertura_caja_id', None)

@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Reclamos de Servicios{% endblock %}
+{% block page_title %}Reclamos de Servicios{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h3>Reclamos de Servicios</h3>
+    <div class="mb-3">
+        <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevoReclamo">
+            <i class="fas fa-plus"></i> Nuevo Reclamo
+        </a>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Factura</th>
+                    <th>Cliente</th>
+                    <th>Tipo Reclamo</th>
+                    <th>Descripción</th>
+                    <th>Estado</th>
+                    <th>Prioridad</th>
+                    <th>Fecha Resolución</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reclamo in reclamos %}
+                <tr>
+                    <td>{{ reclamo.id }}</td>
+                    <td>{{ reclamo.factura or '-' }}</td>
+                    <td>{{ reclamo.cliente or '-' }}</td>
+                    <td>{{ reclamo.tipo_reclamo or '-' }}</td>
+                    <td>{{ reclamo.descripcion or '-' }}</td>
+                    <td>
+                        {% if reclamo.estado == 'pendiente' %}
+                            <span class="badge bg-warning text-dark">Pendiente</span>
+                        {% elif reclamo.estado == 'terminado' %}
+                            <span class="badge bg-success">Terminado</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ reclamo.estado }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ reclamo.prioridad or '-' }}</td>
+                    <td>{{ reclamo.fecha_resolucion or '-' }}</td>
+                    <td>
+                        <a href="#" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#modalEditarReclamo{{ reclamo.id }}">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Nuevo Reclamo -->
+<div class="modal fade" id="modalNuevoReclamo" tabindex="-1" aria-labelledby="modalNuevoReclamoLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form method="post" action="{{ url_for('servicios.crear_reclamo') }}">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalNuevoReclamoLabel">Nuevo Reclamo</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="factura" class="form-label">Factura</label>
+            <input type="text" class="form-control" id="factura" name="factura" placeholder="Ingrese número de factura" required>
+            <button type="button" class="btn btn-secondary mt-2" id="buscarFactura">Buscar</button>
+          </div>
+          <div id="infoFactura"></div>
+          <div class="mb-3">
+            <label for="tipo_reclamo" class="form-label">Tipo de Reclamo</label>
+            <input type="text" class="form-control" id="tipo_reclamo" name="tipo_reclamo" required>
+          </div>
+          <div class="mb-3">
+            <label for="descripcion" class="form-label">Descripción</label>
+            <textarea class="form-control" id="descripcion" name="descripcion" rows="3" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar Reclamo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modales para editar reclamos existentes -->
+{% for reclamo in reclamos %}
+<div class="modal fade" id="modalEditarReclamo{{ reclamo.id }}" tabindex="-1" aria-labelledby="modalEditarReclamoLabel{{ reclamo.id }}" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{{ url_for('servicios.editar_reclamo', id=reclamo.id) }}">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalEditarReclamoLabel{{ reclamo.id }}">Editar Reclamo</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="estado{{ reclamo.id }}" class="form-label">Estado</label>
+            <select class="form-select" id="estado{{ reclamo.id }}" name="estado">
+              <option value="pendiente" {% if reclamo.estado == 'pendiente' %}selected{% endif %}>Pendiente</option>
+              <option value="terminado" {% if reclamo.estado == 'terminado' %}selected{% endif %}>Terminado</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="solucion{{ reclamo.id }}" class="form-label">Solución</label>
+            <textarea class="form-control" id="solucion{{ reclamo.id }}" name="solucion" rows="2">{{ reclamo.solucion or '' }}</textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+<script>
+// Simulación de búsqueda de factura (AJAX real sugerido en producción)
+document.getElementById('buscarFactura').onclick = function() {
+    var factura = document.getElementById('factura').value;
+    var infoDiv = document.getElementById('infoFactura');
+    if (factura) {
+        // Aquí deberías hacer una petición AJAX real para traer los datos de la factura
+        infoDiv.innerHTML = '<div class="alert alert-info">Datos de la factura <b>' + factura + '</b> aparecerán aquí (simulado).</div>';
+    } else {
+        infoDiv.innerHTML = '<div class="alert alert-warning">Ingrese un número de factura válido.</div>';
+    }
+};
+</script>
+{% endblock %}

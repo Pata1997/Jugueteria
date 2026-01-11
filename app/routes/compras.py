@@ -555,8 +555,17 @@ def pagar_compra(id):
                 flash('Debe abrir una caja primero', 'danger')
                 return redirect(url_for('compras.pendientes_pago'))
 
-            # Verificar fondos suficientes en caja
-            disponible = apertura.monto_final if apertura.monto_final is not None else (apertura.monto_inicial or Decimal('0'))
+            # Calcular efectivo disponible igual que en caja/estado
+            from app.routes.caja import calcular_totales_por_forma_pago
+            from app.models import MovimientoCaja
+            totales = calcular_totales_por_forma_pago(apertura.id)
+            total_efectivo = apertura.monto_inicial + totales['efectivo']
+            egresos = MovimientoCaja.query.filter_by(
+                apertura_caja_id=apertura.id,
+                tipo='egreso'
+            ).all()
+            total_egresos = sum(m.monto for m in egresos)
+            disponible = total_efectivo - total_egresos
             print(f"DEBUG: disponible={disponible}, monto={monto}", file=sys.stderr, flush=True)
             if disponible < monto:
                 flash('Fondos insuficientes en caja', 'danger')

@@ -33,18 +33,26 @@ def calcular_totales_por_forma_pago(apertura_id):
     
     # Agrupar pagos confirmados por forma de pago
     for venta in ventas:
+        total_venta = Decimal(venta.total)
+        pagado = Decimal('0')
         for pago in venta.pagos:
             if pago.estado == 'confirmado':
                 forma_nombre = pago.forma_pago.nombre.lower() if pago.forma_pago else 'otros'
-                
+                monto_pago = Decimal(pago.monto)
                 if 'efectivo' in forma_nombre:
-                    totales['efectivo'] += pago.monto
+                    # Solo sumar el neto de efectivo que queda en caja (no el vuelto)
+                    neto_efectivo = min(monto_pago, total_venta - pagado)
+                    totales['efectivo'] += neto_efectivo
+                    pagado += neto_efectivo
                 elif 'tarjeta' in forma_nombre or 'débito' in forma_nombre or 'crédito' in forma_nombre:
-                    totales['tarjeta'] += pago.monto
+                    totales['tarjeta'] += monto_pago
+                    pagado += monto_pago
                 elif 'transferencia' in forma_nombre:
-                    totales['transferencia'] += pago.monto
+                    totales['transferencia'] += monto_pago
+                    pagado += monto_pago
                 elif 'cheque' in forma_nombre:
-                    totales['cheque'] += pago.monto
+                    totales['cheque'] += monto_pago
+                    pagado += monto_pago
     
     totales['total'] = totales['efectivo'] + totales['tarjeta'] + totales['transferencia'] + totales['cheque']
     
@@ -85,32 +93,28 @@ def estado():
             apertura_caja_id=apertura_actual.id,
             estado='completada'
         ).all()
-        
         total_ventas = sum(v.total for v in ventas_list)
-        
         # Usar la función helper para calcular totales por forma de pago
         totales = calcular_totales_por_forma_pago(apertura_actual.id)
-        total_efectivo = totales['efectivo']
-        total_tarjeta = totales['tarjeta']
-        total_transferencias = totales['transferencia']
-        total_cheques = totales['cheque']
-        total_otros = total_transferencias + total_cheques
-        
         # Calcular egresos (compras pagadas desde caja chica)
         egresos = MovimientoCaja.query.filter_by(
             apertura_caja_id=apertura_actual.id,
             tipo='egreso'
         ).all()
         total_egresos = sum(m.monto for m in egresos)
-        
+        # Sumar el monto inicial al total efectivo y descontar egresos
+        total_efectivo = apertura_actual.monto_inicial + totales['efectivo'] - total_egresos
+        total_tarjeta = totales['tarjeta']
+        total_transferencias = totales['transferencia']
+        total_cheques = totales['cheque']
+        total_otros = total_transferencias + total_cheques
         # Obtener pagos de compras de esta apertura
         pagos_compras = PagoCompra.query.filter_by(
             apertura_caja_id=apertura_actual.id,
             origen_pago='caja_chica'
         ).order_by(PagoCompra.fecha_pago.desc()).all()
-        
-        # El monto esperado es: Inicial + Efectivo (ventas) - Egresos (compras)
-        monto_esperado = apertura_actual.monto_inicial + total_efectivo - total_egresos
+        # El monto esperado es igual al efectivo disponible
+        monto_esperado = total_efectivo
     
     return render_template('caja/estado.html',
                          apertura_actual=apertura_actual,
@@ -205,21 +209,30 @@ def cerrar():
         # Calcular totales esperados por forma de pago
         totales = calcular_totales_por_forma_pago(apertura.id)
         
+        # Calcular egresos (compras pagadas desde caja chica)
+        from app.models import MovimientoCaja
+        egresos = MovimientoCaja.query.filter_by(
+            apertura_caja_id=apertura.id,
+            tipo='egreso'
+        ).all()
+        total_egresos = sum(m.monto for m in egresos)
+        # Calcular efectivo esperado en caja (monto inicial + ventas efectivo - egresos)
+        efectivo_esperado = apertura.monto_inicial + totales['efectivo'] - total_egresos
         # Guardar valores en la apertura
         apertura.monto_efectivo_real = monto_efectivo_real
         apertura.monto_tarjeta_real = monto_tarjeta_real
         apertura.monto_transferencias_real = monto_transferencias_real
         apertura.monto_cheques_real = monto_cheques_real
-        
-        apertura.monto_efectivo_esperado = totales['efectivo']
+        apertura.monto_efectivo_esperado = efectivo_esperado
         apertura.monto_tarjeta_esperado = totales['tarjeta']
         apertura.monto_transferencias_esperado = totales['transferencia']
         apertura.monto_cheques_esperado = totales['cheque']
-        
         # Calcular totales reales y esperados
         total_real = monto_efectivo_real + monto_tarjeta_real + monto_transferencias_real + monto_cheques_real
-        total_esperado = totales['total']
+        total_esperado = efectivo_esperado + totales['tarjeta'] + totales['transferencia'] + totales['cheque']
         diferencia_total = total_real - total_esperado
+        # Guardar el monto_sistema correctamente (para arqueo y reportes)
+        apertura.monto_sistema = efectivo_esperado + totales['tarjeta'] + totales['transferencia'] + totales['cheque']
         
         apertura.observaciones_cierre = observaciones_cierre
         apertura.diferencia_total = diferencia_total
@@ -453,4 +466,5 @@ def arqueo(id):
     return render_template('caja/arqueo.html',
                          apertura=apertura,
                          detalle_pagos=detalle_pagos,
-                         ventas=ventas)
+                         ventas=ventas,
+                         total_efectivo=apertura.monto_efectivo_esperado or 0)

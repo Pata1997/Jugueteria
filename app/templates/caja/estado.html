@@ -242,24 +242,7 @@
                     </div>
                 {% endif %}
 
-                <!-- ACCESO RÁPIDO -->
-                <div class="mt-4">
-                    <h6><i class="fas fa-history"></i> Accesos Rápidos</h6>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <a href="{{ url_for('caja.historial') }}" class="btn btn-outline-secondary w-100 mb-2">
-                                <i class="fas fa-list"></i> Ver Historial de Cajas
-                            </a>
-                        </div>
-                        {% if current_user.rol == 'admin' %}
-                        <div class="col-md-6">
-                            <a href="{{ url_for('reportes.index') }}" class="btn btn-outline-primary w-100 mb-2">
-                                <i class="fas fa-chart-bar"></i> Reportes de Caja
-                            </a>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
+                {# Accesos Rápidos eliminados según solicitud. #}
             </div>
         </div>
     </div>
@@ -323,10 +306,10 @@
                                 </tbody>
                             </table>
 
-                            <!-- Total Esperado -->
+                            <!-- Total Esperado (solo ventas, sin monto inicial) -->
                             <div class="alert alert-primary mb-0" style="font-size: 1.1rem;">
                                 <strong>TOTAL ESPERADO:</strong>
-                                <div style="font-size: 1.3rem; margin-top: 5px;">Gs. {{ "{:,.0f}".format(apertura_actual.monto_inicial + total_efectivo + total_tarjeta + total_transferencias | default(0) + total_cheques | default(0)) }}</div>
+                                <div style="font-size: 1.3rem; margin-top: 5px;">Gs. {{ "{:,.0f}".format(total_efectivo + total_tarjeta + (total_transferencias | default(0)) + (total_cheques | default(0))) }}</div>
                             </div>
                         </div>
 
@@ -354,11 +337,11 @@
                                     <input type="text" name="monto_efectivo" id="monto_efectivo" 
                                            class="form-control form-control-lg" required
                                            placeholder="Ej: 110000"
-                                           data-esperado="{{ apertura_actual.monto_inicial + total_efectivo }}"
+                                           data-esperado="{{ total_efectivo }}"
                                            value="">
                                 </div>
                                 <small class="text-muted d-block mt-2">
-                                    Esperado: Gs. {{ "{:,.0f}".format(apertura_actual.monto_inicial + total_efectivo) }}
+                                    Esperado: Gs. {{ "{:,.0f}".format(total_efectivo) }}
                                 </small>
                             </div>
 
@@ -416,7 +399,7 @@
                                     <table class="table table-sm table-borderless mb-0">
                                         <tr>
                                             <td><strong>Total Sistema:</strong></td>
-                                            <td class="text-end"><strong id="total_sistema">Gs. {{ "{:,.0f}".format(apertura_actual.monto_inicial + total_efectivo + total_tarjeta + total_transferencias | default(0) + total_cheques | default(0)) }}</strong></td>
+                                            <td class="text-end"><strong id="total_sistema">Gs. {{ "{:,.0f}".format(total_efectivo + total_tarjeta + (total_transferencias | default(0)) + (total_cheques | default(0))) }}</strong></td>
                                         </tr>
                                         <tr>
                                             <td><strong>Total Real:</strong></td>
@@ -458,7 +441,7 @@
 <script>
 // Valores esperados del sistema
 const valoresEsperados = {
-    efectivo: {{ apertura_actual.monto_inicial + total_efectivo }},
+    efectivo: {{ total_efectivo }},
     tarjeta: {{ total_tarjeta }},
     transferencias: {{ total_transferencias | default(0) }},
     cheques: {{ total_cheques | default(0) }}

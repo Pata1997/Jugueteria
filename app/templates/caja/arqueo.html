@@ -174,7 +174,7 @@
                                     </tr>
                                     <tr>
                                         <td>+ Efectivo Ventas:</td>
-                                        <td class="text-end">Gs. {{ "{:,.0f}".format(total_efectivo) }}</td>
+                                        <td class="text-end">Gs. {{ "{:,.0f}".format((total_efectivo or 0) - (apertura.monto_inicial or 0)) }}</td>
                                     </tr>
                                     <tr class="table-light">
                                         <td><strong>= Monto Sistema:</strong></td>

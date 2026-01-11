@@ -13,26 +13,26 @@
             </div>
             <div class="card-body">
                 <div class="list-group">
-                    <a href="{{ url_for('reportes.ventas_diarias') }}" target="_blank" class="list-group-item list-group-item-action">
+                    <a href="{{ url_for('reportes.ventas_pdf') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-calendar-day"></i> Ventas Diarias
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
                     </a>
-                    <a href="{{ url_for('reportes.ventas_por_periodo') }}" target="_blank" class="list-group-item list-group-item-action">
+                    <a href="{{ url_for('reportes.ventas_pdf') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-calendar-alt"></i> Ventas por Período
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
                     </a>
-                    <a href="{{ url_for('reportes.ventas_por_cliente') }}" target="_blank" class="list-group-item list-group-item-action">
+                    <a href="{{ url_for('reportes.ventas_pdf') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-user-tie"></i> Ventas por Cliente
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
                     </a>
-                    <a href="{{ url_for('reportes.ventas_por_producto') }}" target="_blank" class="list-group-item list-group-item-action">
+                    <a href="{{ url_for('reportes.ventas_pdf') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-box"></i> Productos Más Vendidos
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
                     </a>
-                    <a href="{{ url_for('reportes.cuentas_por_cobrar') }}" target="_blank" class="list-group-item list-group-item-action">
+                    {# <a href="{{ url_for('reportes.reportes_cuentas_por_cobrar') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-money-bill-wave"></i> Cuentas por Cobrar
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
+                    </a> #}
                 </div>
             </div>
         </div>
@@ -46,26 +46,26 @@
             </div>
             <div class="card-body">
                 <div class="list-group">
-                    <a href="{{ url_for('reportes.stock_actual') }}" target="_blank" class="list-group-item list-group-item-action">
+                    {# <a href="{{ url_for('reportes.reportes_stock_actual') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-boxes"></i> Stock Actual
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
+                    </a> #}
                     <a href="{{ url_for('reportes.productos_stock_bajo') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-exclamation-triangle"></i> Productos con Stock Bajo
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
                     </a>
-                    <a href="{{ url_for('reportes.valoracion_inventario') }}" target="_blank" class="list-group-item list-group-item-action">
+                    {# <a href="{{ url_for('reportes.valoracion_inventario') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-dollar-sign"></i> Valoración de Inventario
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
-                    <a href="{{ url_for('reportes.movimientos_inventario') }}" target="_blank" class="list-group-item list-group-item-action">
+                    </a> #}
+                    {# <a href="{{ url_for('reportes.movimientos_inventario') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-exchange-alt"></i> Movimientos de Inventario
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
-                    <a href="{{ url_for('reportes.kardex_producto') }}" target="_blank" class="list-group-item list-group-item-action">
+                    </a> #}
+                    {# <a href="{{ url_for('reportes.kardex_producto') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-list-alt"></i> Kardex por Producto
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
+                    </a> #}
                 </div>
             </div>
         </div>
@@ -79,22 +79,22 @@
             </div>
             <div class="card-body">
                 <div class="list-group">
-                    <a href="{{ url_for('reportes.servicios_realizados') }}" target="_blank" class="list-group-item list-group-item-action">
+                    {# <a href="{{ url_for('reportes.reportes_servicios_realizados') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-clipboard-check"></i> Servicios Realizados
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
-                    <a href="{{ url_for('reportes.servicios_pendientes') }}" target="_blank" class="list-group-item list-group-item-action">
+                    </a> #}
+                    {# <a href="{{ url_for('reportes.reportes_servicios_pendientes') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-clock"></i> Servicios Pendientes
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
-                    <a href="{{ url_for('reportes.servicios_por_tecnico') }}" target="_blank" class="list-group-item list-group-item-action">
+                    </a> #}
+                    {# <a href="{{ url_for('reportes.servicios_por_tecnico') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-user-cog"></i> Servicios por Técnico
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
-                    <a href="{{ url_for('reportes.reclamos') }}" target="_blank" class="list-group-item list-group-item-action">
+                    </a> #}
+                    {# <a href="{{ url_for('reportes.reportes_reclamos') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-exclamation-circle"></i> Reclamos Registrados
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
+                    </a> #}
                 </div>
             </div>
         </div>
@@ -108,52 +108,42 @@
             </div>
             <div class="card-body">
                 <div class="list-group">
-                    <a href="{{ url_for('reportes.compras_por_periodo') }}" target="_blank" class="list-group-item list-group-item-action">
+                    {# <a href="{{ url_for('reportes.reportes_compras_por_periodo') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-calendar-alt"></i> Compras por Período
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
-                    <a href="{{ url_for('reportes.compras_por_proveedor') }}" target="_blank" class="list-group-item list-group-item-action">
+                    </a> #}
+                    {# <a href="{{ url_for('reportes.reportes_compras_por_proveedor') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-truck"></i> Compras por Proveedor
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
-                    <a href="{{ url_for('reportes.cuentas_por_pagar') }}" target="_blank" class="list-group-item list-group-item-action">
+                    </a> #}
+                    {# <a href="{{ url_for('reportes.reportes_cuentas_por_pagar') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-file-invoice-dollar"></i> Cuentas por Pagar
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
-                    <a href="{{ url_for('reportes.pedidos_pendientes') }}" target="_blank" class="list-group-item list-group-item-action">
+                    </a> #}
+                    {# <a href="{{ url_for('reportes.reportes_pedidos_pendientes') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-hourglass-half"></i> Pedidos Pendientes
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
+                    </a> #}
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Reportes de RRHH -->
+    <!-- Reportes de Caja -->
     <div class="col-md-6 mb-3">
         <div class="card">
             <div class="card-header bg-secondary text-white">
-                <i class="fas fa-users"></i> Reportes de Recursos Humanos
+                <i class="fas fa-cash-register"></i> Reportes de Caja
             </div>
             <div class="card-body">
-                <div class="list-group">
-                    <a href="{{ url_for('reportes.listado_empleados') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-list"></i> Listado de Empleados
-                        <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
-                    <a href="{{ url_for('reportes.asistencias') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-calendar-check"></i> Asistencias
-                        <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
-                    <a href="{{ url_for('reportes.vacaciones') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-umbrella-beach"></i> Vacaciones
-                        <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
-                    <a href="{{ url_for('reportes.permisos') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-door-open"></i> Permisos
-                        <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
-                </div>
+                <form method="GET" action="{{ url_for('reportes.caja_dia_pdf') }}" target="_blank" class="mb-2">
+                    <div class="input-group">
+                        <input type="date" name="fecha" class="form-control" required>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-file-pdf"></i> Descargar Caja por Día (PDF)
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -166,22 +156,22 @@
             </div>
             <div class="card-body">
                 <div class="list-group">
-                    <a href="{{ url_for('reportes.estado_resultados') }}" target="_blank" class="list-group-item list-group-item-action">
+                    {# <a href="{{ url_for('reportes.estado_resultados') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-balance-scale"></i> Estado de Resultados
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
-                    <a href="{{ url_for('reportes.flujo_caja') }}" target="_blank" class="list-group-item list-group-item-action">
+                    </a> #}
+                    {# <a href="{{ url_for('reportes.flujo_caja') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-money-bill-wave"></i> Flujo de Caja
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
-                    <a href="{{ url_for('reportes.utilidad_bruta') }}" target="_blank" class="list-group-item list-group-item-action">
+                    </a> #}
+                    {# <a href="{{ url_for('reportes.utilidad_bruta') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-percent"></i> Utilidad Bruta
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
-                    <a href="{{ url_for('reportes.margen_productos') }}" target="_blank" class="list-group-item list-group-item-action">
+                    </a> #}
+                    {# <a href="{{ url_for('reportes.margen_productos') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-calculator"></i> Margen por Productos
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
+                    </a> #}
                 </div>
             </div>
         </div>
@@ -194,7 +184,7 @@
         <i class="fas fa-filter"></i> Generar Reporte Personalizado
     </div>
     <div class="card-body">
-        <form method="POST" action="{{ url_for('reportes.generar_personalizado') }}" target="_blank">
+        {# <form method="POST" action="{{ url_for('reportes.generar_personalizado') }}" target="_blank"> #}
             <div class="row">
                 <div class="col-md-3">
                     <label class="form-label">Tipo de Reporte</label>
@@ -226,61 +216,9 @@
     </div>
 </div>
 
-<!-- Estadísticas Rápidas -->
-<div class="row mt-4">
-    <div class="col-md-3">
-        <div class="card text-white bg-primary">
-            <div class="card-body">
-                <h6><i class="fas fa-chart-line"></i> Ventas del Mes</h6>
-                <h3>Gs. {{ "{:,.0f}".format(estadisticas.ventas_mes) }}</h3>
-                <small>{{ estadisticas.cantidad_ventas }} facturas</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-success">
-            <div class="card-body">
-                <h6><i class="fas fa-boxes"></i> Valor Inventario</h6>
-                <h3>Gs. {{ "{:,.0f}".format(estadisticas.valor_inventario) }}</h3>
-                <small>{{ estadisticas.total_productos }} productos</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-warning">
-            <div class="card-body">
-                <h6><i class="fas fa-tools"></i> Servicios Activos</h6>
-                <h3>{{ estadisticas.servicios_activos }}</h3>
-                <small>En proceso</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-white bg-danger">
-            <div class="card-body">
-                <h6><i class="fas fa-money-bill"></i> Por Cobrar</h6>
-                <h3>Gs. {{ "{:,.0f}".format(estadisticas.por_cobrar) }}</h3>
-                <small>Pendiente</small>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 {% endblock %}
 
-{% block extra_js %}
-<script>
-// Validar fechas
-$('form').submit(function() {
-    const desde = new Date($('[name="fecha_desde"]').val());
+
     const hasta = new Date($('[name="fecha_hasta"]').val());
-    
-    if (hasta < desde) {
-        alert('La fecha hasta no puede ser menor a la fecha desde');
-        return false;
-    }
-    
-    return true;
-});
-</script>
-{% endblock %}

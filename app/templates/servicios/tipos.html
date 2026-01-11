@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="row">
-    <div class="col-md-8">
+    <div class="col-md-12">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="fas fa-wrench"></i> Tipos de Servicio</span>
@@ -116,50 +116,7 @@
         </div>
     </div>
 
-    <!-- Panel Lateral -->
-    <div class="col-md-4">
-        <div class="card bg-light">
-            <div class="card-header">
-                <i class="fas fa-info-circle"></i> Información
-            </div>
-            <div class="card-body">
-                <p><strong>¿Qué es un Tipo de Servicio?</strong></p>
-                <p>Los tipos de servicio definen las categorías de trabajos que realiza tu empresa, con precios base y tiempos estimados.</p>
-                
-                <p class="mt-3"><strong>Opciones disponibles:</strong></p>
-                <ul class="small">
-                    <li><strong>Crear:</strong> Haz clic en "Nuevo Tipo" para agregar</li>
-                    <li><strong>Editar:</strong> Usa el botón <i class="fas fa-edit text-warning"></i></li>
-                    <li><strong>Inhabilitar:</strong> Usa el botón <i class="fas fa-ban text-danger"></i></li>
-                </ul>
-
-                <div class="alert alert-info mt-3 small">
-                    <strong>Nota:</strong> Los tipos deshabilitados no aparecerán en nuevas solicitudes, pero los datos históricos se mantienen.
-                </div>
-            </div>
-        </div>
-
-        <div class="card mt-3">
-            <div class="card-header">
-                <i class="fas fa-eye"></i> Tipos Inactivos
-            </div>
-            <div class="card-body">
-                {% set tipos_inactivos = query_object.query.filter_by(activo=False).all() if query_object else [] %}
-                {% if tipos_inactivos %}
-                    <p class="small text-muted">Tienes <strong>{{ tipos_inactivos|length }}</strong> tipo(s) inactivo(s)</p>
-                    <ul class="small list-unstyled">
-                        {% for tipo in tipos_inactivos %}
-                        <li class="mb-2">
-                            <span class="badge bg-secondary">{{ tipo.codigo }}</span> {{ tipo.nombre }}
-                        </li>
-                        {% endfor %}
-                    </ul>
-                {% else %}
-                    <p class="small text-muted">Todos los tipos están activos</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
+    <!-- Panel Lateral eliminado según requerimiento del usuario -->
 </div>
 
 <!-- Modal Editar -->

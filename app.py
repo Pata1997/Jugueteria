@@ -34,7 +34,7 @@ def create_app(config_name=None):
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     
     # Registrar blueprints
-    from app.routes import auth, dashboard, clientes, productos, servicios, ventas, compras, rrhh, reportes, configuracion, caja
+    from app.routes import auth, dashboard, clientes, productos, servicios, ventas, compras, reportes, configuracion, caja
     
     app.register_blueprint(auth.bp)
     app.register_blueprint(dashboard.bp)
@@ -43,7 +43,6 @@ def create_app(config_name=None):
     app.register_blueprint(servicios.bp)
     app.register_blueprint(ventas.bp)
     app.register_blueprint(compras.bp)
-    app.register_blueprint(rrhh.bp)
     app.register_blueprint(reportes.bp)
     app.register_blueprint(configuracion.bp)
     app.register_blueprint(caja.bp)

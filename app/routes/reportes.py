@@ -13,6 +13,143 @@ from io import BytesIO
 
 bp = Blueprint('reportes', __name__, url_prefix='/reportes')
 
+# ===== REPORTES DE CAJA =====
+@bp.route('/caja-dia/pdf')
+@login_required
+def caja_dia_pdf():
+    fecha = request.args.get('fecha')
+    if not fecha:
+        flash('Debe seleccionar una fecha', 'danger')
+        return redirect(url_for('reportes.index'))
+
+    # Buscar aperturas de caja para la fecha
+    apertura = AperturaCaja.query.filter(
+        db.func.date(AperturaCaja.fecha_apertura) == fecha
+    ).first()
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    elements = []
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        textColor=colors.HexColor('#2c3e50'),
+        spaceAfter=30,
+        alignment=1
+    )
+    elements.append(Paragraph("Reporte de Caja por Día", title_style))
+    elements.append(Paragraph(f"Fecha: {fecha}", styles['Normal']))
+    elements.append(Spacer(1, 20))
+
+    if apertura:
+        data = [
+            ['Fecha Apertura', apertura.fecha_apertura.strftime('%d/%m/%Y %H:%M')],
+            ['Monto Inicial', f"Gs. {apertura.monto_inicial:,.0f}"],
+            ['Monto Final', f"Gs. {apertura.monto_final:,.0f}" if apertura.monto_final else ''],
+            ['Estado', apertura.estado],
+        ]
+        table = Table(data, colWidths=[150, 220])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 12),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ]))
+        elements.append(table)
+    else:
+        elements.append(Paragraph("No se encontró apertura de caja para la fecha seleccionada.", styles['Normal']))
+
+    doc.build(elements)
+    buffer.seek(0)
+    response = make_response(buffer.getvalue())
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'attachment; filename=reporte_caja_{fecha}.pdf'
+    return response
+
+from flask import Blueprint, render_template, redirect, url_for, flash, request, make_response
+from flask_login import login_required
+from app import db
+from app.models import Venta, Compra, Producto, Cliente, AperturaCaja
+from datetime import datetime, timedelta
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.pdfgen import canvas
+from io import BytesIO
+
+bp = Blueprint('reportes', __name__, url_prefix='/reportes')
+
+# ===== REPORTES PERSONALIZADOS SOLICITADOS =====
+@bp.route('/valoracion-inventario')
+@login_required
+def valoracion_inventario():
+    return render_template('reportes/reporte_base.html', titulo='Valoración de Inventario')
+
+@bp.route('/movimientos-inventario')
+@login_required
+def movimientos_inventario():
+    return render_template('reportes/reporte_base.html', titulo='Movimientos de Inventario')
+
+@bp.route('/kardex-producto')
+@login_required
+def kardex_producto():
+    return render_template('reportes/reporte_base.html', titulo='Kardex por Producto')
+
+@bp.route('/servicios-por-tecnico')
+@login_required
+def servicios_por_tecnico():
+    return render_template('reportes/reporte_base.html', titulo='Servicios por Técnico')
+
+@bp.route('/cuentas-por-cobrar', endpoint='reportes_cuentas_por_cobrar')
+@login_required
+def reportes_cuentas_por_cobrar():
+    return render_template('reportes/reporte_base.html', titulo='Cuentas por Cobrar')
+
+@bp.route('/stock-actual', endpoint='reportes_stock_actual')
+@login_required
+def reportes_stock_actual():
+    return render_template('reportes/reporte_base.html', titulo='Stock Actual')
+
+@bp.route('/servicios-realizados', endpoint='reportes_servicios_realizados')
+@login_required
+def reportes_servicios_realizados():
+    return render_template('reportes/reporte_base.html', titulo='Servicios Realizados')
+
+@bp.route('/servicios-pendientes', endpoint='reportes_servicios_pendientes')
+@login_required
+def reportes_servicios_pendientes():
+    return render_template('reportes/reporte_base.html', titulo='Servicios Pendientes')
+
+@bp.route('/reclamos', endpoint='reportes_reclamos')
+@login_required
+def reportes_reclamos():
+    return render_template('reportes/reporte_base.html', titulo='Reclamos')
+
+@bp.route('/compras-por-periodo', endpoint='reportes_compras_por_periodo')
+@login_required
+def reportes_compras_por_periodo():
+    return render_template('reportes/reporte_base.html', titulo='Compras por Período')
+
+@bp.route('/compras-por-proveedor', endpoint='reportes_compras_por_proveedor')
+@login_required
+def reportes_compras_por_proveedor():
+    return render_template('reportes/reporte_base.html', titulo='Compras por Proveedor')
+
+@bp.route('/cuentas-por-pagar', endpoint='reportes_cuentas_por_pagar')
+@login_required
+def reportes_cuentas_por_pagar():
+    return render_template('reportes/reporte_base.html', titulo='Cuentas por Pagar')
+
+@bp.route('/pedidos-pendientes', endpoint='reportes_pedidos_pendientes')
+@login_required
+def reportes_pedidos_pendientes():
+    return render_template('reportes/reporte_base.html', titulo='Pedidos Pendientes')
+
 @bp.route('/')
 @login_required
 def index():

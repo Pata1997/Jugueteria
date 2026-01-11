@@ -78,9 +78,9 @@
                 <i class="fas fa-chart-bar"></i> Estadísticas
             </div>
             <div class="card-body">
-                <p><strong>Total Ventas:</strong> {{ cliente.ventas.count() }}</p>
-                <p><strong>Total Servicios:</strong> {{ cliente.solicitudes.count() }}</p>
-                <p><strong>Reclamos:</strong> {{ cliente.reclamos.count() }}</p>
+                <p><strong>Total Ventas:</strong> {{ total_ventas }}</p>
+                <p><strong>Total Servicios:</strong> {{ total_servicios }}</p>
+                <p><strong>Reclamos:</strong> {{ total_reclamos }}</p>
             </div>
         </div>
     </div>
@@ -105,7 +105,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for venta in cliente.ventas.order_by('-fecha_venta').limit(10) %}
+                    {% for venta in ventas_recientes %}
                     <tr>
                         <td>{{ venta.fecha_venta.strftime('%d/%m/%Y') }}</td>
                         <td><a href="{{ url_for('ventas.ver', id=venta.id) }}">{{ venta.numero_factura }}</a></td>
@@ -116,8 +116,14 @@
                             <span class="badge bg-success">Pagado</span>
                             {% elif venta.estado_pago == 'pendiente' %}
                             <span class="badge bg-danger">Pendiente</span>
-                            {% else %}
+                            {% elif venta.estado_pago == 'parcial' %}
                             <span class="badge bg-warning">Parcial</span>
+                            {% elif venta.estado == 'anulada' %}
+                            <span class="badge bg-secondary">Anulada</span>
+                            {% elif venta.estado == 'rechazada' %}
+                            <span class="badge bg-dark">Rechazada</span>
+                            {% else %}
+                            <span class="badge bg-info">{{ venta.estado|capitalize }}</span>
                             {% endif %}
                         </td>
                     </tr>

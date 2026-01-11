@@ -59,8 +59,18 @@ def crear():
 @bp.route('/<int:id>')
 @login_required
 def ver(id):
+    from app.models.venta import Venta
+    from app.models.servicio import SolicitudServicio
     cliente = Cliente.query.get_or_404(id)
-    return render_template('clientes/ver.html', cliente=cliente)
+    # Mostrar todas las ventas recientes, incluyendo anuladas/rechazadas
+    ventas_recientes = Venta.query.filter_by(cliente_id=id).order_by(Venta.fecha_venta.desc()).limit(10).all()
+    # Contador total de ventas (todas)
+    total_ventas = Venta.query.filter_by(cliente_id=id).count()
+    # Contador total de servicios (todas)
+    total_servicios = SolicitudServicio.query.filter_by(cliente_id=id).count()
+    # Reclamos
+    total_reclamos = cliente.reclamos.count()
+    return render_template('clientes/ver.html', cliente=cliente, ventas_recientes=ventas_recientes, total_ventas=total_ventas, total_servicios=total_servicios, total_reclamos=total_reclamos)
 
 @bp.route('/<int:id>/editar', methods=['GET', 'POST'])
 @login_required
