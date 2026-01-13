@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% block title %}Reclamos de Servicios{% endblock %}
+{% block page_title %}Reclamos de Servicios{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h3 class="mb-4">Reclamos de Servicios</h3>
+    <a href="{{ url_for('reclamos.crear') }}" class="btn btn-primary mb-3">+ Nuevo Reclamo</a>
+    <form class="mb-3 d-flex flex-wrap gap-2 align-items-center">
+        <label for="filtro_estado" class="me-2">Estado:</label>
+        <select id="filtro_estado" name="estado" class="form-select form-select-sm w-auto">
+            <option value="">Todos</option>
+            <option value="registrado">Registrado</option>
+            <option value="en_proceso">En Proceso</option>
+            <option value="resuelto">Resuelto</option>
+            <option value="cerrado">Cerrado</option>
+        </select>
+        <label for="filtro_prioridad" class="ms-3 me-2">Prioridad:</label>
+        <select id="filtro_prioridad" name="prioridad" class="form-select form-select-sm w-auto">
+            <option value="">Todos</option>
+            <option value="baja">Baja</option>
+            <option value="media">Media</option>
+            <option value="alta">Alta</option>
+            <option value="critica">Crítica</option>
+        </select>
+    </form>
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped table-sm align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Nº Reclamo</th>
+                    <th>Cliente</th>
+                    <th>Documento</th>
+                    <th>Tipo</th>
+                    <th>Estado</th>
+                    <th>Prioridad</th>
+                    <th>Responsable</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in reclamos %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ r.numero }}</td>
+                    <td>{{ r.cliente.nombre if r.cliente else '' }}</td>
+                    <td>
+                        {% if r.documento_tipo == 'factura' %}
+                            Factura {{ r.documento_numero }}
+                        {% elif r.documento_tipo == 'servicio' %}
+                            Servicio {{ r.documento_numero }}
+                        {% else %}
+                            {{ r.documento_numero or '-' }}
+                        {% endif %}
+                    </td>
+                    <td>{{ r.tipo_reclamo }}</td>
+                    <td>{{ r.estado|capitalize }}</td>
+                    <td>{{ r.prioridad|capitalize }}</td>
+                    <td>{{ r.responsable.nombre if r.responsable else '-' }}</td>
+                    <td class="d-flex gap-1">
+                        <a href="{{ url_for('reclamos.ver', id=r.id) }}" class="btn btn-sm btn-info">Ver</a>
+                        <button class="btn btn-sm btn-warning" onclick="abrirModalEstado({{ r.id }})">Cambiar Estado</button>
+                        {% if r.estado != 'cerrado' %}
+                            <button class="btn btn-sm btn-danger" onclick="abrirModalCerrar({{ r.id }})">Cerrar</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+
+        <!-- Modal Cambiar Estado -->
+        <div class="modal fade" id="modalEstado" tabindex="-1" aria-labelledby="modalEstadoLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form id="formCambiarEstado" method="POST">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="modalEstadoLabel">Cambiar Estado</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                        </div>
+                        <div class="modal-body">
+                            <input type="hidden" id="modal_estado_id" name="id">
+                            <div class="mb-3">
+                                <label for="estado_nuevo_modal">Estado</label>
+                                <select class="form-select" id="estado_nuevo_modal" name="estado_nuevo" required>
+                                    <option value="en_analisis">En análisis</option>
+                                    <option value="en_proceso">En proceso</option>
+                                    <option value="pendiente_cliente">Pendiente cliente</option>
+                                    <option value="resuelto">Resuelto</option>
+                                    <option value="cerrado">Cerrado</option>
+                                    <option value="rechazado">Rechazado</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="comentario_modal">Comentario</label>
+                                <input type="text" class="form-control" id="comentario_modal" name="comentario">
+                            </div>
+                            <div class="mb-3">
+                                <label for="resolucion_modal">Resolución (requerido para cerrar o resolver)</label>
+                                <textarea class="form-control" id="resolucion_modal" name="resolucion" rows="2"></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Guardar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Cerrar Reclamo -->
+        <div class="modal fade" id="modalCerrar" tabindex="-1" aria-labelledby="modalCerrarLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form id="formCerrarReclamo" method="POST">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="modalCerrarLabel">Cerrar Reclamo</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                        </div>
+                        <div class="modal-body">
+                            <input type="hidden" id="modal_cerrar_id" name="id">
+                            <div class="mb-3">
+                                <label for="resolucion_cerrar">Resolución <span class="text-danger">*</span></label>
+                                <textarea class="form-control" id="resolucion_cerrar" name="resolucion" rows="2" required></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="comentario_cerrar">Comentario final</label>
+                                <input type="text" class="form-control" id="comentario_cerrar" name="comentario">
+                            </div>
+                            <input type="hidden" name="estado_nuevo" value="cerrado">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-danger">Cerrar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/reclamos.js') }}"></script>
+<script>
+    // Abrir modal para cambiar estado
+    window.abrirModalEstado = function(id) {
+        document.getElementById('modal_estado_id').value = id;
+        var modal = new bootstrap.Modal(document.getElementById('modalEstado'));
+        modal.show();
+        document.getElementById('formCambiarEstado').action = '/servicios/reclamos/' + id + '/cambiar_estado';
+    }
+    // Abrir modal para cerrar reclamo
+    window.abrirModalCerrar = function(id) {
+        document.getElementById('modal_cerrar_id').value = id;
+        var modal = new bootstrap.Modal(document.getElementById('modalCerrar'));
+        modal.show();
+        document.getElementById('formCerrarReclamo').action = '/servicios/reclamos/' + id + '/cambiar_estado';
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block title %}Nuevo Reclamo{% endblock %}
+{% block page_title %}Registrar Reclamo{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h3 class="mb-4">Registrar Reclamo</h3>
+    <form method="POST" autocomplete="off">
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="documento_numero">Nº Factura / Nº Servicio</label>
+                <input type="text" class="form-control" id="documento_numero" name="documento_numero" required>
+                <input type="hidden" id="documento_id" name="documento_id">
+                <input type="hidden" id="documento_tipo" name="documento_tipo">
+                <small class="form-text text-muted">Busque y seleccione, o ingrese manualmente.</small>
+            </div>
+            <div class="col-md-6">
+                <label for="cliente_id">Cliente</label>
+                <select class="form-control" id="cliente_id" name="cliente_id">
+                    <option value="">Seleccione...</option>
+                    {% for c in clientes %}
+                    <option value="{{ c.id }}">{{ c.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="tipo_reclamo">Tipo de Reclamo</label>
+                <input type="text" class="form-control" id="tipo_reclamo" name="tipo_reclamo" required>
+            </div>
+            <div class="col-md-6">
+                <label for="prioridad">Prioridad</label>
+                <select class="form-control" id="prioridad" name="prioridad">
+                    <option value="baja">Baja</option>
+                    <option value="media" selected>Media</option>
+                    <option value="alta">Alta</option>
+                    <option value="critica">Crítica</option>
+                </select>
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="descripcion">Descripción</label>
+            <textarea class="form-control" id="descripcion" name="descripcion" rows="3" required></textarea>
+        </div>
+        <div class="mb-3">
+            <label for="fecha_estimada_resolucion">Fecha Estimada de Resolución</label>
+            <input type="date" class="form-control" id="fecha_estimada_resolucion" name="fecha_estimada_resolucion">
+        </div>
+        <button type="submit" class="btn btn-success">Registrar Reclamo</button>
+        <a href="{{ url_for('reclamos.listar') }}" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+<script src="{{ url_for('static', filename='js/reclamos.js') }}"></script>
+{% endblock %}

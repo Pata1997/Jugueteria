@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.models import Cliente
 from datetime import datetime
+from app.utils import registrar_bitacora
 
 bp = Blueprint('clientes', __name__, url_prefix='/clientes')
 
@@ -43,17 +44,14 @@ def crear():
                 descuento_especial=request.form.get('descuento_especial', 0),
                 observaciones=request.form.get('observaciones')
             )
-            
             db.session.add(cliente)
             db.session.commit()
-            
+            registrar_bitacora('crear-cliente', f'Cliente creado: {cliente.nombre} ({cliente.numero_documento})')
             flash('Cliente creado correctamente', 'success')
             return redirect(url_for('clientes.ver', id=cliente.id))
-            
         except Exception as e:
             db.session.rollback()
             flash(f'Error al crear cliente: {str(e)}', 'danger')
-    
     return render_template('clientes/crear.html')
 
 @bp.route('/<int:id>')
@@ -76,7 +74,6 @@ def ver(id):
 @login_required
 def editar(id):
     cliente = Cliente.query.get_or_404(id)
-    
     if request.method == 'POST':
         try:
             cliente.tipo_documento = request.form.get('tipo_documento')
@@ -90,30 +87,27 @@ def editar(id):
             cliente.descuento_especial = request.form.get('descuento_especial', 0)
             cliente.observaciones = request.form.get('observaciones')
             cliente.activo = request.form.get('activo') == 'on'
-            
             db.session.commit()
+            registrar_bitacora('editar-cliente', f'Cliente editado: {cliente.nombre} ({cliente.numero_documento})')
             flash('Cliente actualizado correctamente', 'success')
             return redirect(url_for('clientes.ver', id=cliente.id))
-            
         except Exception as e:
             db.session.rollback()
             flash(f'Error al actualizar cliente: {str(e)}', 'danger')
-    
     return render_template('clientes/editar.html', cliente=cliente)
 
 @bp.route('/<int:id>/eliminar', methods=['POST'])
 @login_required
 def eliminar(id):
     cliente = Cliente.query.get_or_404(id)
-    
     try:
         cliente.activo = False
         db.session.commit()
+        registrar_bitacora('eliminar-cliente', f'Cliente eliminado: {cliente.nombre} ({cliente.numero_documento})')
         flash('Cliente desactivado correctamente', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Error al desactivar cliente: {str(e)}', 'danger')
-    
     return redirect(url_for('clientes.listar'))
 
 @bp.route('/buscar')

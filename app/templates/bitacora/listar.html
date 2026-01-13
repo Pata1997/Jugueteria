@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %}Bitácora del Sistema{% endblock %}
+{% block page_title %}Bitácora de Actividades{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h3 class="mb-4">Bitácora de Actividades</h3>
+    <div class="table-responsive">
+        <table class="table table-bordered table-striped table-sm">
+            <thead class="table-dark">
+                <tr>
+                    <th>Fecha</th>
+                    <th>Usuario</th>
+                    <th>Acción</th>
+                    <th>Descripción</th>
+                    <th>IP</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in registros %}
+                <tr>
+                    <td>{{ r.fecha.strftime('%d/%m/%Y %H:%M:%S') }}</td>
+                    <td>{{ r.usuario.username if r.usuario else 'Desconocido' }}</td>
+                    <td>{{ r.accion }}</td>
+                    <td>{{ r.descripcion or '' }}</td>
+                    <td>{{ r.ip or '' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

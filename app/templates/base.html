@@ -202,8 +202,10 @@
             
             {% if current_user.rol == 'admin' %}
             <div class="nav-section">
-                <div class="px-3 py-2 text-white-50 small">CONFIGURACIÓN</div>
-                
+                <div class="px-3 py-2 text-white-50 small">ADMINISTRACIÓN</div>
+                <a class="nav-link" href="{{ url_for('bitacora.ver_bitacora') }}">
+                    <i class="fas fa-clipboard-list"></i> Bitácora del Sistema
+                </a>
                 <a class="nav-link" href="{{ url_for('configuracion.index') }}">
                     <i class="fas fa-cog"></i> Configuración
                 </a>

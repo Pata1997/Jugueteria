@@ -5,6 +5,7 @@ from app.models import (TipoServicio, SolicitudServicio, Presupuesto, Presupuest
                         OrdenServicio, OrdenServicioDetalle, Reclamo, ReclamoSeguimiento,
                         Cliente, Producto, Venta, VentaDetalle, Usuario)
 from datetime import datetime, date
+from app.utils import registrar_bitacora
 
 bp = Blueprint('servicios', __name__, url_prefix='/servicios')
 
@@ -183,7 +184,7 @@ def crear_solicitud():
                 solicitud.observaciones = f"[LÍNEAS]{lineas_json_str}"
             
             db.session.commit()
-            
+            registrar_bitacora('crear-solicitud', f'Solicitud creada: {solicitud.numero_solicitud} para cliente {solicitud.cliente_id}')
             flash('Solicitud creada correctamente', 'success')
             return redirect(url_for('servicios.ver_solicitud', id=solicitud.id))
             
@@ -340,6 +341,7 @@ def aprobar_solicitud(id):
         venta.observaciones += f"\n[DESGLOSE_IVA]{json.dumps(desglose_iva)}"
         
         db.session.commit()
+        registrar_bitacora('aprobar-solicitud', f'Solicitud aprobada: {solicitud.numero_solicitud} por usuario {current_user.username}')
         flash('Solicitud aprobada y venta pendiente creada con detalle completo', 'success')
     except Exception as e:
         db.session.rollback()
@@ -353,6 +355,7 @@ def rechazar_solicitud(id):
     try:
         solicitud.estado = 'rechazado'
         db.session.commit()
+        registrar_bitacora('rechazar-solicitud', f'Solicitud rechazada: {solicitud.numero_solicitud} por usuario {current_user.username}')
         flash('Solicitud rechazada', 'info')
     except Exception as e:
         db.session.rollback()
@@ -366,20 +369,8 @@ def terminar_solicitud(id):
     try:
         solicitud.estado = 'terminado'
         db.session.commit()
+        registrar_bitacora('terminar-solicitud', f'Solicitud terminada: {solicitud.numero_solicitud} por usuario {current_user.username}')
         flash('Solicitud marcada como terminada', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error: {str(e)}', 'danger')
-    return redirect(url_for('servicios.ver_solicitud', id=id))
-
-@bp.route('/solicitudes/<int:id>/entregar', methods=['POST'])
-@login_required
-def entregar_solicitud(id):
-    solicitud = SolicitudServicio.query.get_or_404(id)
-    try:
-        solicitud.estado = 'entregado'
-        db.session.commit()
-        flash('Solicitud entregada', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Error: {str(e)}', 'danger')

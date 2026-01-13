@@ -12,7 +12,7 @@ from datetime import datetime
 from decimal import Decimal
 
 
-def generar_reporte_arqueo(apertura, totales_esperados, empresa_config):
+def generar_reporte_arqueo(apertura, totales_esperados, empresa_config, return_elements=False):
     """
     Genera un PDF con el reporte de arqueo de caja
     
@@ -182,9 +182,9 @@ def generar_reporte_arqueo(apertura, totales_esperados, empresa_config):
     elements.append(Spacer(1, 0.1*inch))
     
     # ===== OBSERVACIONES =====
-    if apertura.observaciones_cierre:
+    if apertura.observaciones:
         elements.append(Paragraph("<b>Observaciones:</b>", heading_style))
-        elements.append(Paragraph(apertura.observaciones_cierre, normal_style))
+        elements.append(Paragraph(apertura.observaciones, normal_style))
         elements.append(Spacer(1, 0.1*inch))
     
     # ===== FIRMA =====
@@ -203,6 +203,8 @@ def generar_reporte_arqueo(apertura, totales_esperados, empresa_config):
     ]))
     elements.append(firma_table)
     
+    if return_elements:
+        return elements
     # Construir PDF
     doc.build(elements)
     buffer.seek(0)

@@ -5,6 +5,7 @@ from app.models import (Proveedor, PedidoCompra, PedidoCompraDetalle,
                         PresupuestoProveedor, OrdenCompra, Compra, CompraDetalle,
                         CuentaPorPagar, PagoProveedor, Producto, PagoCompra, 
                         MovimientoCaja, AperturaCaja, MovimientoProducto, HistorialPrecio)
+from app.utils import registrar_bitacora
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 import json
@@ -49,7 +50,6 @@ def crear_proveedor():
         try:
             ultimo = Proveedor.query.order_by(Proveedor.id.desc()).first()
             codigo = f"PROV-{(ultimo.id + 1 if ultimo else 1):04d}"
-            
             proveedor = Proveedor(
                 codigo=codigo,
                 razon_social=request.form.get('razon_social'),
@@ -62,17 +62,14 @@ def crear_proveedor():
                 tipo_proveedor=request.form.get('tipo_proveedor'),
                 observaciones=request.form.get('observaciones')
             )
-            
             db.session.add(proveedor)
             db.session.commit()
-            
+            registrar_bitacora('crear-proveedor', f'Proveedor creado: {proveedor.razon_social} ({proveedor.ruc})')
             flash('Proveedor creado correctamente', 'success')
             return redirect(url_for('compras.proveedores'))
-            
         except Exception as e:
             db.session.rollback()
             flash(f'Error: {str(e)}', 'danger')
-    
     return render_template('compras/crear_proveedor.html')
 
 # ===== PROVEEDOR - VER Y EDITAR =====
@@ -101,7 +98,6 @@ def ver_proveedor(id):
 @login_required
 def editar_proveedor(id):
     proveedor = Proveedor.query.get_or_404(id)
-
     if request.method == 'POST':
         try:
             proveedor.razon_social = request.form.get('razon_social')
@@ -113,14 +109,13 @@ def editar_proveedor(id):
             proveedor.contacto_telefono = request.form.get('contacto_telefono')
             proveedor.tipo_proveedor = request.form.get('tipo_proveedor')
             proveedor.observaciones = request.form.get('observaciones')
-
             db.session.commit()
+            registrar_bitacora('editar-proveedor', f'Proveedor editado: {proveedor.razon_social} ({proveedor.ruc})')
             flash('Proveedor actualizado correctamente', 'success')
             return redirect(url_for('compras.ver_proveedor', id=proveedor.id))
         except Exception as e:
             db.session.rollback()
             flash(f'Error: {str(e)}', 'danger')
-
     return render_template('compras/editar_proveedor.html', proveedor=proveedor)
 
 # ===== PEDIDOS DE COMPRA =====
@@ -140,7 +135,6 @@ def crear_pedido():
         try:
             ultimo = PedidoCompra.query.order_by(PedidoCompra.id.desc()).first()
             numero = f"PED-{(ultimo.id + 1 if ultimo else 1):06d}"
-            
             pedido = PedidoCompra(
                 numero_pedido=numero,
                 proveedor_id=request.form.get('proveedor_id'),
@@ -148,12 +142,9 @@ def crear_pedido():
                 usuario_solicita_id=current_user.id,
                 observaciones=request.form.get('observaciones')
             )
-            
-            # Agregar detalles
             import json
             detalles_json = request.form.get('detalles_json')
             detalles = json.loads(detalles_json)
-            
             for det in detalles:
                 detalle = PedidoCompraDetalle(
                     pedido=pedido,
@@ -161,17 +152,14 @@ def crear_pedido():
                     cantidad_solicitada=det['cantidad']
                 )
                 db.session.add(detalle)
-            
             db.session.add(pedido)
             db.session.commit()
-            
+            registrar_bitacora('crear-pedido', f'Pedido creado: {pedido.numero_pedido} para proveedor {pedido.proveedor_id}')
             flash('Pedido creado correctamente', 'success')
             return redirect(url_for('compras.ver_pedido', id=pedido.id))
-            
         except Exception as e:
             db.session.rollback()
             flash(f'Error: {str(e)}', 'danger')
-    
     proveedores = Proveedor.query.filter_by(activo=True).all()
     return render_template('compras/crear_pedido.html', proveedores=proveedores)
 

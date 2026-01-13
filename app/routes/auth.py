@@ -3,6 +3,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 from app import db
 from app.models.usuario import Usuario
 from functools import wraps
+from app.utils import registrar_bitacora
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -40,17 +41,20 @@ def login():
             from datetime import datetime
             usuario.ultimo_acceso = datetime.utcnow()
             db.session.commit()
+            registrar_bitacora('login', f'Usuario {usuario.username} inició sesión')
             
             next_page = request.args.get('next')
             return redirect(next_page or url_for('dashboard.index'))
         else:
             flash('Usuario o contraseña incorrectos', 'danger')
+            registrar_bitacora('login-fallido', f'Intento fallido de login para usuario: {username}')
     
     return render_template('auth/login.html', config=config)
 
 @bp.route('/logout')
 @login_required
 def logout():
+    registrar_bitacora('logout', f'Usuario {current_user.username} cerró sesión')
     logout_user()
     flash('Sesión cerrada correctamente', 'success')
     return redirect(url_for('auth.login'))

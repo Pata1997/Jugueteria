@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from app import db
 from app.models import Producto, Categoria, MovimientoProducto, HistorialPrecio
+from app.utils import registrar_bitacora
 from datetime import datetime
 
 bp = Blueprint('productos', __name__, url_prefix='/productos')
@@ -70,9 +71,7 @@ def listar():
 def crear():
     if request.method == 'POST':
         try:
-            # Generar código automáticamente
             codigo = Producto.generar_proximo_codigo()
-            
             producto = Producto(
                 codigo=codigo,
                 nombre=request.form.get('nombre'),
@@ -88,17 +87,14 @@ def crear():
                 tipo_iva=request.form.get('tipo_iva', 'exenta'),
                 es_importado=request.form.get('es_importado') == 'on'
             )
-            
             db.session.add(producto)
             db.session.commit()
-            
+            registrar_bitacora('crear-producto', f'Producto creado: {producto.nombre} ({producto.codigo})')
             flash('Producto creado correctamente', 'success')
             return redirect(url_for('productos.ver', id=producto.id))
-            
         except Exception as e:
             db.session.rollback()
             flash(f'Error al crear producto: {str(e)}', 'danger')
-    
     categorias = Categoria.query.filter_by(activo=True).all()
     proximo_codigo = Producto.generar_proximo_codigo()
     return render_template('productos/crear.html', categorias=categorias, proximo_codigo=proximo_codigo)
@@ -114,13 +110,10 @@ def ver(id):
 @login_required
 def editar(id):
     producto = Producto.query.get_or_404(id)
-    
     if request.method == 'POST':
         try:
-            # Guardar historial de precios si cambiaron
             precio_compra_nuevo = float(request.form.get('precio_compra', 0))
             precio_venta_nuevo = float(request.form.get('precio_venta', 0))
-            
             if precio_compra_nuevo != float(producto.precio_compra) or \
                precio_venta_nuevo != float(producto.precio_venta):
                 historial = HistorialPrecio(
@@ -133,7 +126,6 @@ def editar(id):
                     motivo=request.form.get('motivo_cambio_precio', 'Actualización manual')
                 )
                 db.session.add(historial)
-            
             producto.codigo = request.form.get('codigo')
             producto.nombre = request.form.get('nombre')
             producto.descripcion = request.form.get('descripcion')
@@ -147,15 +139,13 @@ def editar(id):
             producto.tipo_iva = request.form.get('tipo_iva', 'exenta')
             producto.es_importado = request.form.get('es_importado') == 'on'
             producto.activo = request.form.get('activo') == 'on'
-            
             db.session.commit()
+            registrar_bitacora('editar-producto', f'Producto editado: {producto.nombre} ({producto.codigo})')
             flash('Producto actualizado correctamente', 'success')
             return redirect(url_for('productos.ver', id=producto.id))
-            
         except Exception as e:
             db.session.rollback()
             flash(f'Error al actualizar producto: {str(e)}', 'danger')
-    
     categorias = Categoria.query.filter_by(activo=True).all()
     return render_template('productos/editar.html', producto=producto, categorias=categorias)
 
@@ -163,19 +153,15 @@ def editar(id):
 @login_required
 def ajustar_stock(id):
     producto = Producto.query.get_or_404(id)
-    
     try:
-        tipo_ajuste = request.form.get('tipo_ajuste')  # entrada o salida
+        tipo_ajuste = request.form.get('tipo_ajuste')
         cantidad = int(request.form.get('cantidad'))
         observaciones = request.form.get('observaciones')
-        
         stock_anterior = producto.stock_actual
-        
         if tipo_ajuste == 'entrada':
             producto.stock_actual += cantidad
         else:
             producto.stock_actual -= cantidad
-        
         movimiento = MovimientoProducto(
             producto_id=producto.id,
             tipo_movimiento=tipo_ajuste,
@@ -186,16 +172,13 @@ def ajustar_stock(id):
             usuario_id=current_user.id,
             observaciones=observaciones
         )
-        
         db.session.add(movimiento)
         db.session.commit()
-        
+        registrar_bitacora('ajustar-stock', f'Stock ajustado: {producto.nombre} ({producto.codigo}), tipo: {tipo_ajuste}, cantidad: {cantidad}')
         flash('Stock ajustado correctamente', 'success')
-        
     except Exception as e:
         db.session.rollback()
         flash(f'Error al ajustar stock: {str(e)}', 'danger')
-    
     return redirect(url_for('productos.ver', id=id))
 
 @bp.route('/stock-bajo')

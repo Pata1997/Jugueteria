@@ -12,6 +12,7 @@ from sqlalchemy import func, and_
 from decimal import Decimal
 from app.utils.reports import generar_reporte_arqueo
 from app.models import ConfiguracionEmpresa
+from app.utils import registrar_bitacora
 
 bp = Blueprint('caja', __name__, url_prefix='/caja')
 
@@ -137,7 +138,6 @@ def abrir():
     Abre una nueva caja
     """
     try:
-        # Verificar que no tenga una caja ya abierta
         apertura_existente = AperturaCaja.query.filter_by(
             cajero_id=current_user.id,
             estado='abierto'
@@ -163,6 +163,7 @@ def abrir():
         db.session.add(apertura)
         db.session.commit()
         
+        registrar_bitacora('abrir-caja', f'Apertura de caja: {caja_id} por usuario {current_user.username}')
         flash(f'Caja abierta exitosamente con Gs. {monto_inicial:,.0f}', 'success')
         return redirect(url_for('caja.estado'))
         
@@ -354,6 +355,8 @@ def realizar_arqueo(id):
             
             db.session.commit()
             
+            registrar_bitacora('cerrar-caja', f'Cierre de caja: {apertura.caja_id} por usuario {current_user.username}')
+            
             # Calcular diferencia total
             diferencia_total = total_real - (apertura.monto_sistema or Decimal('0'))
             
@@ -433,36 +436,55 @@ def arqueo(id):
     Ver arqueo detallado de una caja cerrada
     """
     apertura = AperturaCaja.query.get_or_404(id)
-    
-    # Verificar permisos
+    # Permitir acceso a admin o al cajero dueño
     if apertura.cajero_id != current_user.id and current_user.rol != 'admin':
         flash('No tienes permiso para ver este arqueo', 'danger')
         return redirect(url_for('caja.historial'))
-    
-    if apertura.estado != 'cerrado':
+    if apertura.estado != 'cerrada':
         flash('Esta caja aún no ha sido cerrada', 'warning')
         return redirect(url_for('caja.ver_apertura', id=id))
-    
-    # Obtener detalles de pagos agrupados por forma de pago
+
+    # Si se solicita PDF profesional
+    if request.args.get('pdf') == '1':
+        # Generar PDF profesional usando el generador existente
+        from app.utils.reports import generar_reporte_arqueo
+        empresa = ConfiguracionEmpresa.query.first()
+        empresa_config = {
+            'nombre': empresa.nombre_empresa if empresa else 'JUGUETERÍA',
+            'subtitulo': 'El Mundo Feliz',
+            'ruc': empresa.ruc if empresa else 'N/A',
+            'direccion': empresa.direccion if empresa else ''
+        }
+        # Calcular totales esperados
+        from app.routes.caja import calcular_totales_por_forma_pago
+        totales = calcular_totales_por_forma_pago(apertura.id)
+        totales_con_inicial = totales.copy()
+        totales_con_inicial['efectivo'] = apertura.monto_inicial + totales['efectivo']
+        totales_con_inicial['total'] = apertura.monto_inicial + totales['total']
+        pdf_buffer = generar_reporte_arqueo(apertura, totales_con_inicial, empresa_config)
+        fecha_str = apertura.fecha_cierre.strftime('%Y%m%d_%H%M') if apertura.fecha_cierre else ''
+        filename = f"Arqueo_Caja_{apertura.caja.nombre}_{fecha_str}.pdf"
+        return send_file(
+            pdf_buffer,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/pdf'
+        )
+
+    # Renderizado HTML normal
     ventas = Venta.query.filter_by(apertura_caja_id=apertura.id).all()
-    
-    # Diccionario para agrupar por forma de pago
     detalle_pagos = {}
-    
     for venta in ventas:
         for pago in venta.pagos:
             if pago.estado == 'confirmado':
                 forma_nombre = pago.forma_pago.nombre if pago.forma_pago else 'Desconocido'
-                
                 if forma_nombre not in detalle_pagos:
                     detalle_pagos[forma_nombre] = {
                         'cantidad': 0,
                         'total': Decimal('0')
                     }
-                
                 detalle_pagos[forma_nombre]['cantidad'] += 1
                 detalle_pagos[forma_nombre]['total'] += pago.monto
-    
     return render_template('caja/arqueo.html',
                          apertura=apertura,
                          detalle_pagos=detalle_pagos,

@@ -5,6 +5,7 @@ from app.models import (Caja, AperturaCaja, Venta, VentaDetalle, Pago,
                         NotaCredito, NotaDebito, Cliente, Producto, OrdenServicio)
 from datetime import datetime, date
 from decimal import Decimal
+from app.utils import registrar_bitacora
 
 bp = Blueprint('ventas', __name__, url_prefix='/ventas')
 
@@ -36,13 +37,11 @@ def apertura_caja():
                 monto_inicial=request.form.get('monto_inicial'),
                 observaciones=request.form.get('observaciones')
             )
-            
             db.session.add(apertura)
             db.session.commit()
-            
+            registrar_bitacora('apertura-caja', f'Apertura de caja: {apertura.caja_id} por usuario {current_user.username}')
             flash('Caja abierta correctamente', 'success')
             return redirect(url_for('ventas.ver_apertura', id=apertura.id))
-            
         except Exception as e:
             db.session.rollback()
             flash(f'Error: {str(e)}', 'danger')
@@ -71,7 +70,6 @@ def ver_apertura(id):
 @login_required
 def cerrar_caja(id):
     apertura = AperturaCaja.query.get_or_404(id)
-    
     if request.method == 'POST':
         try:
             apertura.monto_final = Decimal(str(request.form.get('monto_final') or 0))
@@ -79,16 +77,13 @@ def cerrar_caja(id):
             apertura.estado = 'cerrado'
             apertura.observaciones = request.form.get('observaciones')
             apertura.calcular_cierre()
-            
             db.session.commit()
-            
+            registrar_bitacora('cierre-caja', f'Cierre de caja: {apertura.caja_id} por usuario {current_user.username}')
             flash('Caja cerrada correctamente', 'success')
             return redirect(url_for('ventas.arqueo_caja', id=id))
-            
         except Exception as e:
             db.session.rollback()
             flash(f'Error: {str(e)}', 'danger')
-    
     # Calcular totales para mostrar
     apertura.calcular_cierre()
     return render_template('ventas/cerrar_caja.html', apertura=apertura)
@@ -243,7 +238,7 @@ def crear():
             
             db.session.add(venta)
             db.session.commit()
-            
+            registrar_bitacora('crear-venta', f'Venta creada: {venta.numero_factura} para cliente {venta.cliente_id}')
             flash('Venta registrada correctamente', 'success')
             return redirect(url_for('ventas.ver', id=venta.id))
             

@@ -14,26 +14,50 @@
             <div class="card-body">
                 <div class="list-group">
                     <a href="{{ url_for('reportes.ventas_pdf') }}" target="_blank" class="list-group-item list-group-item-action">
+                        <i class="fas fa-file-pdf"></i> Ventas (PDF)
+                        <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
+                    </a>
+                    {# <a href="#" class="list-group-item list-group-item-action" data-bs-toggle="modal" data-bs-target="#modalVentasDiarias">
                         <i class="fas fa-calendar-day"></i> Ventas Diarias
-                        <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
-                    <a href="{{ url_for('reportes.ventas_pdf') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-calendar-alt"></i> Ventas por Período
-                        <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
-                    <a href="{{ url_for('reportes.ventas_pdf') }}" target="_blank" class="list-group-item list-group-item-action">
+                    </a> #}
+                    {# <a href="{{ url_for('reportes.ventas_cliente_pdf') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-user-tie"></i> Ventas por Cliente
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
-                    <a href="{{ url_for('reportes.ventas_pdf') }}" target="_blank" class="list-group-item list-group-item-action">
+                    </a> #}
+                    {# <a href="{{ url_for('reportes.productos_mas_vendidos_pdf') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-box"></i> Productos Más Vendidos
-                        <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
-                    {# <a href="{{ url_for('reportes.reportes_cuentas_por_cobrar') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-money-bill-wave"></i> Cuentas por Cobrar
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
                     </a> #}
                 </div>
+                                <!-- Modal Ventas Diarias -->
+                    {#
+                    <div class="modal fade" id="modalVentasDiarias" tabindex="-1" aria-labelledby="modalVentasDiariasLabel" aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <form method="GET" action="{{ url_for('reportes.ventas_diarias_pdf') }}" target="_blank">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="modalVentasDiariasLabel">Ventas Diarias - Seleccionar Fechas</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label for="fecha_desde_diaria" class="form-label">Desde</label>
+                                            <input type="date" class="form-control" id="fecha_desde_diaria" name="desde" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="fecha_hasta_diaria" class="form-label">Hasta</label>
+                                            <input type="date" class="form-control" id="fecha_hasta_diaria" name="hasta" required>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="submit" class="btn btn-danger"><i class="fas fa-file-pdf"></i> Descargar PDF</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    #}
+                                <!-- Modal Ventas por Período OMITIDO: endpoint no existe -->
             </div>
         </div>
     </div>
@@ -46,26 +70,10 @@
             </div>
             <div class="card-body">
                 <div class="list-group">
-                    {# <a href="{{ url_for('reportes.reportes_stock_actual') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-boxes"></i> Stock Actual
-                        <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a> #}
-                    <a href="{{ url_for('reportes.productos_stock_bajo') }}" target="_blank" class="list-group-item list-group-item-action">
+                    <a href="{{ url_for('reportes.productos_stock_bajo_pdf') }}" target="_blank" class="list-group-item list-group-item-action">
                         <i class="fas fa-exclamation-triangle"></i> Productos con Stock Bajo
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
                     </a>
-                    {# <a href="{{ url_for('reportes.valoracion_inventario') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-dollar-sign"></i> Valoración de Inventario
-                        <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a> #}
-                    {# <a href="{{ url_for('reportes.movimientos_inventario') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-exchange-alt"></i> Movimientos de Inventario
-                        <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a> #}
-                    {# <a href="{{ url_for('reportes.kardex_producto') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-list-alt"></i> Kardex por Producto
-                        <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a> #}
                 </div>
             </div>
         </div>
@@ -79,28 +87,43 @@
             </div>
             <div class="card-body">
                 <div class="list-group">
-                    {# <a href="{{ url_for('reportes.reportes_servicios_realizados') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-clipboard-check"></i> Servicios Realizados
+                    <a href="#" class="list-group-item list-group-item-action" data-bs-toggle="modal" data-bs-target="#modalServiciosPorFecha">
+                        <i class="fas fa-tools"></i> Servicios por Fecha
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a> #}
-                    {# <a href="{{ url_for('reportes.reportes_servicios_pendientes') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-clock"></i> Servicios Pendientes
-                        <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a> #}
-                    {# <a href="{{ url_for('reportes.servicios_por_tecnico') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-user-cog"></i> Servicios por Técnico
-                        <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a> #}
-                    {# <a href="{{ url_for('reportes.reportes_reclamos') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-exclamation-circle"></i> Reclamos Registrados
-                        <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a> #}
+                    </a>
+                </div>
+                <!-- Modal Servicios por Fecha -->
+                <div class="modal fade" id="modalServiciosPorFecha" tabindex="-1" aria-labelledby="modalServiciosPorFechaLabel" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form method="GET" action="{{ url_for('reportes.servicios_pdf') }}" target="_blank">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="modalServiciosPorFechaLabel">Servicios por Fecha - Seleccionar Fechas</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label for="fecha_desde_servicio" class="form-label">Desde</label>
+                                        <input type="date" class="form-control" id="fecha_desde_servicio" name="desde" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="fecha_hasta_servicio" class="form-label">Hasta</label>
+                                        <input type="date" class="form-control" id="fecha_hasta_servicio" name="hasta" required>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="submit" class="btn btn-danger"><i class="fas fa-file-pdf"></i> Descargar PDF</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     
     <!-- Reportes de Compras -->
+
     <div class="col-md-6 mb-3">
         <div class="card">
             <div class="card-header bg-warning">
@@ -108,22 +131,14 @@
             </div>
             <div class="card-body">
                 <div class="list-group">
-                    {# <a href="{{ url_for('reportes.reportes_compras_por_periodo') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-calendar-alt"></i> Compras por Período
+                    <a href="{{ url_for('reportes.compras_pdf') }}" target="_blank" class="list-group-item list-group-item-action">
+                        <i class="fas fa-file-pdf"></i> Todas las Compras (PDF)
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a> #}
-                    {# <a href="{{ url_for('reportes.reportes_compras_por_proveedor') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-truck"></i> Compras por Proveedor
+                    </a>
+                    <a href="{{ url_for('reportes.compras_pendientes_pago_pdf') }}" target="_blank" class="list-group-item list-group-item-action">
+                        <i class="fas fa-file-invoice-dollar"></i> Compras Pendientes de Pago (PDF)
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a> #}
-                    {# <a href="{{ url_for('reportes.reportes_cuentas_por_pagar') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-file-invoice-dollar"></i> Cuentas por Pagar
-                        <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a> #}
-                    {# <a href="{{ url_for('reportes.reportes_pedidos_pendientes') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-hourglass-half"></i> Pedidos Pendientes
-                        <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a> #}
+                    </a>
                 </div>
             </div>
         </div>
@@ -136,14 +151,15 @@
                 <i class="fas fa-cash-register"></i> Reportes de Caja
             </div>
             <div class="card-body">
-                <form method="GET" action="{{ url_for('reportes.caja_dia_pdf') }}" target="_blank" class="mb-2">
+                <form id="form-buscar-cajas" class="mb-3">
                     <div class="input-group">
-                        <input type="date" name="fecha" class="form-control" required>
-                        <button type="submit" class="btn btn-danger">
-                            <i class="fas fa-file-pdf"></i> Descargar Caja por Día (PDF)
+                        <input type="date" name="fecha" id="fecha-caja" class="form-control" required>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Buscar Cajas Cerradas
                         </button>
                     </div>
                 </form>
+                <div id="resultados-cajas"></div>
             </div>
         </div>
     </div>
@@ -156,22 +172,10 @@
             </div>
             <div class="card-body">
                 <div class="list-group">
-                    {# <a href="{{ url_for('reportes.estado_resultados') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-balance-scale"></i> Estado de Resultados
+                    <a href="{{ url_for('reportes.financiero_pdf') }}" target="_blank" class="list-group-item list-group-item-action">
+                        <i class="fas fa-balance-scale"></i> Balance Financiero Mensual (PDF)
                         <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a> #}
-                    {# <a href="{{ url_for('reportes.flujo_caja') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-money-bill-wave"></i> Flujo de Caja
-                        <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a> #}
-                    {# <a href="{{ url_for('reportes.utilidad_bruta') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-percent"></i> Utilidad Bruta
-                        <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a> #}
-                    {# <a href="{{ url_for('reportes.margen_productos') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-calculator"></i> Margen por Productos
-                        <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a> #}
+                    </a>
                 </div>
             </div>
         </div>
@@ -179,6 +183,42 @@
 </div>
 
 <!-- Filtros Personalizados -->
+{% block extra_js %}
+<script>
+// AJAX para buscar aperturas de caja cerradas por fecha
+document.getElementById('form-buscar-cajas').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const fecha = document.getElementById('fecha-caja').value;
+    if (!fecha) return;
+    const resultados = document.getElementById('resultados-cajas');
+    resultados.innerHTML = '<div class="text-center py-3"><div class="spinner-border"></div> Buscando...</div>';
+    fetch(`/reportes/cajas-cerradas?fecha=${fecha}`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data || !data.length) {
+                resultados.innerHTML = '<div class="alert alert-warning text-center">No se encontraron cajas cerradas para esa fecha.</div>';
+                return;
+            }
+            let html = `<div class='table-responsive'><table class='table table-sm table-bordered'><thead><tr><th>ID</th><th>Caja</th><th>Cajero</th><th>Apertura</th><th>Cierre</th><th>PDF Arqueo</th></tr></thead><tbody>`;
+            for (const apertura of data) {
+                html += `<tr>` +
+                    `<td>${apertura.id}</td>` +
+                    `<td>${apertura.caja}</td>` +
+                    `<td>${apertura.cajero}</td>` +
+                    `<td>${apertura.fecha_apertura}</td>` +
+                    `<td>${apertura.fecha_cierre}</td>` +
+                    `<td><a href="/caja/arqueo/${apertura.id}?pdf=1" target="_blank" class="btn btn-danger btn-sm"><i class="fas fa-file-pdf"></i> PDF</a></td>` +
+                    `</tr>`;
+            }
+            html += '</tbody></table></div>';
+            resultados.innerHTML = html;
+        })
+        .catch(() => {
+            resultados.innerHTML = '<div class="alert alert-danger text-center">Error al buscar cajas.</div>';
+        });
+});
+</script>
+{% endblock %}
 <div class="card mt-3">
     <div class="card-header bg-dark text-white">
         <i class="fas fa-filter"></i> Generar Reporte Personalizado

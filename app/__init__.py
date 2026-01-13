@@ -52,7 +52,9 @@ def create_app(config_class=Config):
     
     # Registrar blueprints
     from app.routes import auth, dashboard, clientes, productos, servicios, ventas, compras, reportes, configuracion as config_bp, caja
-    
+    from app.routes import bitacora
+
+
     app.register_blueprint(auth.bp)
     app.register_blueprint(dashboard.bp)
     app.register_blueprint(clientes.bp)
@@ -63,7 +65,8 @@ def create_app(config_class=Config):
     app.register_blueprint(reportes.bp)
     app.register_blueprint(config_bp.bp)
     app.register_blueprint(caja.bp)
-    
+    app.register_blueprint(bitacora.bp)
+
     # User loader para Flask-Login
     @login_manager.user_loader
     def load_user(user_id):
