@@ -14,9 +14,11 @@
             <a href="{{ url_for('productos.stock_bajo') }}" class="btn btn-warning btn-sm">
                 <i class="fas fa-exclamation-triangle"></i> Stock Bajo
             </a>
+            {% if current_user.rol in ['admin', 'tecnico'] %}
             <a href="{{ url_for('productos.crear') }}" class="btn btn-primary btn-sm">
                 <i class="fas fa-plus"></i> Nuevo Producto
             </a>
+            {% endif %}
         </div>
     </div>
     <div class="card-body">
@@ -98,9 +100,11 @@
                             <a href="{{ url_for('productos.ver', id=producto.id) }}" class="btn btn-sm btn-info" title="Ver">
                                 <i class="fas fa-eye"></i>
                             </a>
+                            {% if current_user.rol in ['admin', 'tecnico'] %}
                             <a href="{{ url_for('productos.editar', id=producto.id) }}" class="btn btn-sm btn-warning" title="Editar">
                                 <i class="fas fa-edit"></i>
                             </a>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}

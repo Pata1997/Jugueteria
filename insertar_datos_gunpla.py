@@ -3,21 +3,84 @@ Script para insertar datos de prueba: Productos Gunpla, Servicios y Órdenes de 
 """
 
 from app import create_app, db
-from app.models.producto import Producto, Categoria
-from app.models.servicio import TipoServicio
-from app.models.compra import Proveedor, Compra, CompraDetalle
-from app.models.usuario import Usuario
+    # Los imports de modelos van dentro de with app.app_context()
 from datetime import datetime, date
 from decimal import Decimal
 
 def insertar_datos_gunpla():
     app = create_app()
-    
     with app.app_context():
         print("\n" + "="*60)
         print("INSERTANDO DATOS DE GUNPLA EN LA BASE DE DATOS")
         print("="*60 + "\n")
-        
+
+        # ====== LIMPIAR USUARIOS Y RECREAR LOS PRINCIPALES ======
+        # ====== LIMPIAR BASE DE DATOS (excepto configuración) ======
+        print("\nLIMPIANDO BASE DE DATOS DE PRUEBA...")
+        from app.models import (
+            Producto, Categoria, TipoServicio, SolicitudServicio, Proveedor, Compra, CompraDetalle,
+            Cliente, Usuario, Venta, VentaDetalle, Pago, CuentaPorPagar, PagoCompra, AperturaCaja, MovimientoCaja
+        )
+        # Borrar primero los movimientos de caja para evitar error de clave foránea con aperturas de caja
+        db.session.query(MovimientoCaja).delete()
+        db.session.query(AperturaCaja).delete()
+        db.session.query(PagoCompra).delete()
+        db.session.query(VentaDetalle).delete()
+        db.session.query(Pago).delete()
+        db.session.query(Venta).delete()
+        db.session.query(CuentaPorPagar).delete()
+        db.session.query(CompraDetalle).delete()
+        db.session.query(Compra).delete()
+        db.session.query(Proveedor).delete()
+        db.session.query(SolicitudServicio).delete()
+        db.session.query(Cliente).delete()
+        db.session.commit()
+        print("✓ Base de datos de prueba limpiada (excepto configuración)")
+        # Ahora sí, eliminar usuarios y recrear los principales
+        print("\nLIMPIANDO USUARIOS Y RECREANDO PRINCIPALES...")
+        from app.models import MovimientoProducto, HistorialPrecio, Bitacora
+        db.session.query(MovimientoProducto).delete()
+        db.session.query(HistorialPrecio).delete()
+        db.session.query(Bitacora).delete()
+        db.session.query(Usuario).delete()
+        db.session.commit()
+        usuarios = [
+            dict(username='admin', email='admin@demo.com', nombre='Admin', apellido='Demo', rol='admin', password='123456'),
+            dict(username='recepcion', email='recepcion@demo.com', nombre='Recepcion', apellido='Demo', rol='recepcion', password='123456'),
+            dict(username='tecnico', email='tecnico@demo.com', nombre='Tecnico', apellido='Demo', rol='tecnico', password='123456'),
+            dict(username='caja', email='caja@demo.com', nombre='Caja', apellido='Demo', rol='caja', password='123456'),
+        ]
+        for u in usuarios:
+            user = Usuario(
+                username=u['username'],
+                email=u['email'],
+                nombre=u['nombre'],
+                apellido=u['apellido'],
+                rol=u['rol'],
+                activo=True
+            )
+            user.set_password(u['password'])
+            db.session.add(user)
+        db.session.commit()
+        print("✓ Usuarios principales recreados: admin, recepcion, tecnico, caja")
+        # ====== LIMPIAR BASE DE DATOS (excepto configuración) ======
+        print("\nLIMPIANDO BASE DE DATOS DE PRUEBA...")
+        # Eliminar ventas, compras, reclamos, servicios, clientes, proveedores
+        from app.models.venta import Venta, VentaDetalle, Pago
+        from app.models.compra import Compra, CompraDetalle, Proveedor
+        from app.models.servicio import SolicitudServicio
+        from app.models.cliente import Cliente
+        # Eliminar detalles y relaciones primero
+        db.session.query(VentaDetalle).delete()
+        db.session.query(Pago).delete()
+        db.session.query(Venta).delete()
+        db.session.query(CompraDetalle).delete()
+        db.session.query(Compra).delete()
+        db.session.query(Proveedor).delete()
+        db.session.query(SolicitudServicio).delete()
+        db.session.query(Cliente).delete()
+        db.session.commit()
+        print("✓ Base de datos de prueba limpiada (excepto configuración)")
         # ====== 1. CREAR CATEGORÍA GUNPLA ======
         print("1. Creando categoría Gunpla...")
         categoria_gunpla = Categoria.query.filter_by(codigo='GUNPLA').first()

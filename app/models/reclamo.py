@@ -19,7 +19,6 @@ class Reclamo(db.Model):
     fecha_estimada_resolucion = db.Column(db.DateTime, nullable=True)
     fecha_cierre = db.Column(db.DateTime, nullable=True)
 
-    cliente = db.relationship('Cliente')
     responsable = db.relationship('Usuario')
     historial = db.relationship('ReclamoHistorial', backref='reclamo', lazy='dynamic')
 
@@ -34,3 +33,16 @@ class ReclamoHistorial(db.Model):
     fecha = db.Column(db.DateTime, default=datetime.utcnow)
 
     usuario = db.relationship('Usuario')
+
+class ReclamoSeguimiento(db.Model):
+    __tablename__ = 'reclamo_seguimientos'
+    id = db.Column(db.Integer, primary_key=True)
+    reclamo_id = db.Column(db.Integer, db.ForeignKey('reclamos.id'), nullable=False)
+    fecha = db.Column(db.DateTime, default=datetime.utcnow)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'))
+    descripcion = db.Column(db.Text, nullable=False)
+    estado_anterior = db.Column(db.String(20))
+    estado_nuevo = db.Column(db.String(20))
+    usuario = db.relationship('Usuario', backref='seguimientos_reclamos')
+    def __repr__(self):
+        return f'<ReclamoSeguimiento {self.reclamo_id}>'

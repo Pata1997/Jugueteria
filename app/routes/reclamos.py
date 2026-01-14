@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
+from app.utils.roles import require_roles
 from app import db
 from app.models.reclamo import Reclamo, ReclamoHistorial
 from app.models.cliente import Cliente
@@ -19,6 +20,7 @@ def generar_numero_reclamo():
 
 @bp.route('/')
 @login_required
+@require_roles('admin', 'tecnico', 'recepcion')
 def listar():
     reclamos = Reclamo.query.order_by(Reclamo.fecha_creacion.desc()).all()
     return render_template('reclamos/listar.html', reclamos=reclamos)

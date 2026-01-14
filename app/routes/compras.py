@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
+from app.utils.roles import require_roles
 from app import db
 from app.models import (Proveedor, PedidoCompra, PedidoCompraDetalle,
                         PresupuestoProveedor, OrdenCompra, Compra, CompraDetalle,
@@ -16,6 +17,7 @@ bp = Blueprint('compras', __name__, url_prefix='/compras')
 # ===== PROVEEDORES =====
 @bp.route('/proveedores')
 @login_required
+@require_roles('admin', 'caja')
 def proveedores():
     page = request.args.get('page', 1, type=int)
     proveedores = Proveedor.query.filter_by(activo=True).paginate(

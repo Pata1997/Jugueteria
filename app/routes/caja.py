@@ -4,6 +4,7 @@ Incluye: apertura, cierre, arqueo y consulta de estado
 """
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, send_file
 from flask_login import login_required, current_user
+from app.utils.roles import require_roles
 from app import db
 from app.models import Caja, AperturaCaja, Venta, Pago, FormaPago
 from datetime import datetime

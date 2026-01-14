@@ -2,6 +2,8 @@
 
 from flask import Blueprint, render_template, request, make_response, redirect, url_for, flash, jsonify
 from flask_login import login_required
+from flask_login import current_user
+from app.utils.roles import require_roles
 from io import BytesIO
 from datetime import datetime, timedelta
 from reportlab.lib.pagesizes import A4, letter
@@ -17,6 +19,19 @@ from app.models import Compra, Proveedor, Venta, Producto, Cliente, Configuracio
 # =====================================================
 bp = Blueprint('reportes', __name__, url_prefix='/reportes')
 
+@bp.route('/caja')
+@login_required
+@require_roles('admin', 'caja')
+def reportes_caja():
+    # ... lógica de reportes de caja ...
+    pass
+
+@bp.route('/servicios')
+@login_required
+@require_roles('admin', 'tecnico')
+def reportes_servicios():
+    # ... lógica de reportes de servicios ...
+    pass
 # =====================================================
 # REPORTE FINANCIERO MENSUAL (PDF)
 # =====================================================

@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
+from app.utils.roles import require_roles
 from app import db
 from app.models import Producto, Categoria, MovimientoProducto, HistorialPrecio
 from app.utils import registrar_bitacora
@@ -10,12 +11,14 @@ bp = Blueprint('productos', __name__, url_prefix='/productos')
 # ===== CATEGORÍAS =====
 @bp.route('/categorias')
 @login_required
+@require_roles('admin', 'tecnico', 'recepcion')
 def categorias():
     categorias = Categoria.query.filter_by(activo=True).all()
     return render_template('productos/categorias.html', categorias=categorias)
 
 @bp.route('/categorias/crear', methods=['POST'])
 @login_required
+@require_roles('admin', 'tecnico')
 def crear_categoria():
     try:
         categoria = Categoria(

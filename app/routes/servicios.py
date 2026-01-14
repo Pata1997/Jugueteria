@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
+from app.utils.roles import require_roles
 from app import db
 from app.models import (TipoServicio, SolicitudServicio, Presupuesto, PresupuestoDetalle,
                         OrdenServicio, OrdenServicioDetalle, Reclamo, ReclamoSeguimiento,
@@ -12,6 +13,7 @@ bp = Blueprint('servicios', __name__, url_prefix='/servicios')
 # ===== TIPOS DE SERVICIO =====
 @bp.route('/tipos')
 @login_required
+@require_roles('admin', 'tecnico', 'recepcion')
 def tipos():
     tipos = TipoServicio.query.filter_by(activo=True).all()
     return render_template('servicios/tipos.html', tipos=tipos)

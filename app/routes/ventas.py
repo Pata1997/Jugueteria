@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, send_file
 from flask_login import login_required, current_user
+from app.utils.roles import require_roles
 from app import db
 from app.models import (Caja, AperturaCaja, Venta, VentaDetalle, Pago, 
                         NotaCredito, NotaDebito, Cliente, Producto, OrdenServicio)
@@ -12,12 +13,14 @@ bp = Blueprint('ventas', __name__, url_prefix='/ventas')
 # ===== CAJAS =====
 @bp.route('/cajas')
 @login_required
+@require_roles('admin', 'caja')
 def cajas():
     cajas = Caja.query.all()
     return render_template('ventas/cajas.html', cajas=cajas)
 
 @bp.route('/apertura', methods=['GET', 'POST'])
 @login_required
+@require_roles('admin', 'caja')
 def apertura_caja():
     # Verificar si ya hay una caja abierta
     caja_abierta = AperturaCaja.query.filter_by(

@@ -21,7 +21,6 @@ class Cliente(db.Model):
     # Relaciones
     solicitudes = db.relationship('SolicitudServicio', backref='cliente', lazy='dynamic')
     ventas = db.relationship('Venta', backref='cliente', lazy='dynamic')
-    reclamos = db.relationship('Reclamo', backref='cliente', lazy='dynamic')
     
     def __repr__(self):
         return f'<Cliente {self.numero_documento} - {self.nombre}>'
