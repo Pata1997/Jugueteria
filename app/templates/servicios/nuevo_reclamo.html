@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}Nuevo Reclamo{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Nuevo Reclamo</h2>
+    <form id="buscador-factura">
+        <div class="mb-3">
+            <label for="factura" class="form-label">Buscar Factura</label>
+            <input type="text" class="form-control" id="factura" name="factura" placeholder="Ingrese número de factura">
+            <div id="sugerencias" class="list-group mt-1"></div>
+        </div>
+    </form>
+    <div id="detalle-factura" style="display:none;">
+        <h4>Detalle de Factura</h4>
+        <div id="info-factura"></div>
+        <form id="form-reclamo" method="POST" action="{{ url_for('servicios.crear_reclamo') }}">
+            <input type="hidden" name="factura_id" id="factura_id">
+            <div class="mb-3">
+                <label for="tipo_reclamo" class="form-label">Tipo de Reclamo</label>
+                <input type="text" class="form-control" name="tipo_reclamo" id="tipo_reclamo" required>
+            </div>
+            <div class="mb-3">
+                <label for="descripcion" class="form-label">Descripción</label>
+                <textarea class="form-control" name="descripcion" id="descripcion" rows="3" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Guardar Reclamo</button>
+        </form>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(function() {
+    $('#factura').on('input', function() {
+        var query = $(this).val();
+        if (query.length < 2) {
+            $('#sugerencias').empty();
+            return;
+        }
+        $.getJSON('/servicios/api/buscar_factura', {q: query}, function(data) {
+            var sugerencias = '';
+            data.forEach(function(item) {
+                sugerencias += '<a href="#" class="list-group-item list-group-item-action" data-id="'+item.id+'">'+item.numero+' - '+item.cliente+'</a>';
+            });
+            $('#sugerencias').html(sugerencias);
+        });
+    });
+    $('#sugerencias').on('click', 'a', function(e) {
+        e.preventDefault();
+        var factura_id = $(this).data('id');
+        $('#factura_id').val(factura_id);
+        $.getJSON('/servicios/api/detalle_factura', {id: factura_id}, function(data) {
+            var html = '<ul class="list-group">';
+            html += '<li class="list-group-item"><b>Cliente:</b> '+data.cliente+'</li>';
+            html += '<li class="list-group-item"><b>Fecha:</b> '+data.fecha+'</li>';
+            html += '<li class="list-group-item"><b>Total:</b> '+data.total+'</li>';
+            html += '<li class="list-group-item"><b>Trabajos:</b><ul>';
+            data.trabajos.forEach(function(trabajo) {
+                html += '<li>'+trabajo.detalle+' - Gs. '+trabajo.precio+'</li>';
+            });
+            html += '</ul></li></ul>';
+            $('#info-factura').html(html);
+            $('#detalle-factura').show();
+            $('#sugerencias').empty();
+        });
+    });
+});
+</script>
+{% endblock %}

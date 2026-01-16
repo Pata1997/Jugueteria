@@ -1,3 +1,21 @@
+
+
+
+# Ruta para editar reclamo (POST)
+@bp.route('/reclamos/<int:id>', methods=['POST'])
+@login_required
+def editar_reclamo(id):
+    reclamo = Reclamo.query.get_or_404(id)
+    estado = request.form.get('estado')
+    solucion = request.form.get('solucion')
+    reclamo.estado = estado
+    reclamo.solucion = solucion
+    db.session.commit()
+    flash('Reclamo actualizado correctamente', 'success')
+    return redirect(url_for('servicios.reclamos'))
+
+# ...existing code...
+
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
 from app.utils.roles import require_roles
@@ -9,6 +27,48 @@ from datetime import datetime, date
 from app.utils import registrar_bitacora
 
 bp = Blueprint('servicios', __name__, url_prefix='/servicios')
+
+
+
+
+@bp.route('/api/buscar_factura')
+@login_required
+def api_buscar_factura():
+    q = request.args.get('q', '')
+    facturas = Venta.query.filter(Venta.numero_factura.like(f'%{q}%')).limit(10).all()
+    resultados = [
+        {'id': f.id, 'numero': f.numero_factura, 'cliente': f.cliente.nombre}
+        for f in facturas
+    ]
+    return jsonify(resultados)
+
+@bp.route('/api/detalle_factura')
+@login_required
+def api_detalle_factura():
+    id = request.args.get('id')
+    factura = Venta.query.get_or_404(id)
+    trabajos = []
+    for d in factura.detalles:
+        detalle = d.descripcion
+        if hasattr(d, 'producto') and d.producto:
+            detalle = f"{d.producto.nombre} ({d.descripcion})"
+        trabajos.append({
+            'detalle': detalle,
+            'tipo': d.tipo_item,
+            'precio': float(d.precio_unitario),
+            'cantidad': float(d.cantidad)
+        })
+    data = {
+        'cliente': factura.cliente.nombre,
+        'fecha': factura.fecha_venta.strftime('%d/%m/%Y'),
+        'total': float(factura.total),
+        'trabajos': trabajos
+    }
+    return jsonify(data)
+@bp.route('/reclamos/nuevo', methods=['GET'])
+@login_required
+def nuevo_reclamo():
+    return render_template('servicios/nuevo_reclamo.html')
 
 # ===== TIPOS DE SERVICIO =====
 @bp.route('/tipos')
@@ -606,11 +666,11 @@ def reclamos():
     if estado:
         query = query.filter_by(estado=estado)
     
-    reclamos = query.order_by(Reclamo.fecha_reclamo.desc()).paginate(
+    reclamos_pagination = query.order_by(Reclamo.fecha_creacion.desc()).paginate(
         page=page, per_page=20, error_out=False
     )
-    
-    return render_template('servicios/reclamos.html', reclamos=reclamos)
+    reclamos = reclamos_pagination.items
+    return render_template('servicios/reclamos.html', reclamos=reclamos, reclamos_pagination=reclamos_pagination)
 
 @bp.route('/reclamos/crear', methods=['GET', 'POST'])
 @login_required
@@ -619,23 +679,24 @@ def crear_reclamo():
         try:
             ultimo = Reclamo.query.order_by(Reclamo.id.desc()).first()
             numero = f"REC-{(ultimo.id + 1 if ultimo else 1):06d}"
-            
+            factura_id = request.form.get('factura_id')
+            factura = Venta.query.get(factura_id)
             reclamo = Reclamo(
-                numero_reclamo=numero,
-                cliente_id=request.form.get('cliente_id'),
+                numero=numero,
+                cliente_id=factura.cliente_id if factura else None,
                 tipo_reclamo=request.form.get('tipo_reclamo'),
-                orden_servicio_id=request.form.get('orden_servicio_id'),
                 descripcion=request.form.get('descripcion'),
-                prioridad=request.form.get('prioridad', 'normal'),
-                asignado_a_id=request.form.get('asignado_a_id')
+                prioridad='media',
+                estado='registrado',
+                fecha_creacion=datetime.utcnow(),
+                documento_tipo='factura',
+                documento_numero=factura.numero_factura if factura else None,
+                documento_id=factura.id if factura else None
             )
-            
             db.session.add(reclamo)
             db.session.commit()
-            
             flash('Reclamo registrado correctamente', 'success')
-            return redirect(url_for('servicios.ver_reclamo', id=reclamo.id))
-            
+            return redirect(url_for('servicios.reclamos'))
         except Exception as e:
             db.session.rollback()
             flash(f'Error: {str(e)}', 'danger')
@@ -710,3 +771,17 @@ def agregar_seguimiento(id):
         flash(f'Error: {str(e)}', 'danger')
     
     return redirect(url_for('servicios.ver_reclamo', id=id))
+
+@bp.route('/solicitudes/<int:id>/entregar', methods=['POST'])
+@login_required
+def entregar_solicitud(id):
+    solicitud = SolicitudServicio.query.get_or_404(id)
+    try:
+        solicitud.estado = 'entregado'
+        db.session.commit()
+        registrar_bitacora('entregar-solicitud', f'Solicitud entregada: {solicitud.numero_solicitud} por usuario {current_user.username}')
+        flash('Solicitud marcada como entregada', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error: {str(e)}', 'danger')
+    return redirect(url_for('servicios.ver_solicitud', id=id))

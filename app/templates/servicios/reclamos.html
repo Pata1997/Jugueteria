@@ -5,8 +5,8 @@
 <div class="container mt-4">
     <h3>Reclamos de Servicios</h3>
     <div class="mb-3">
-        <a href="#" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevoReclamo">
-            <i class="fas fa-plus"></i> Nuevo Reclamo
+        <a href="{{ url_for('servicios.nuevo_reclamo') }}" class="btn btn-primary">
+          <i class="fas fa-plus"></i> Nuevo Reclamo
         </a>
     </div>
     <div class="table-responsive">
@@ -55,39 +55,7 @@
     </div>
 </div>
 
-<!-- Modal Nuevo Reclamo -->
-<div class="modal fade" id="modalNuevoReclamo" tabindex="-1" aria-labelledby="modalNuevoReclamoLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <form method="post" action="{{ url_for('servicios.crear_reclamo') }}">
-        <div class="modal-header">
-          <h5 class="modal-title" id="modalNuevoReclamoLabel">Nuevo Reclamo</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-3">
-            <label for="factura" class="form-label">Factura</label>
-            <input type="text" class="form-control" id="factura" name="factura" placeholder="Ingrese número de factura" required>
-            <button type="button" class="btn btn-secondary mt-2" id="buscarFactura">Buscar</button>
-          </div>
-          <div id="infoFactura"></div>
-          <div class="mb-3">
-            <label for="tipo_reclamo" class="form-label">Tipo de Reclamo</label>
-            <input type="text" class="form-control" id="tipo_reclamo" name="tipo_reclamo" required>
-          </div>
-          <div class="mb-3">
-            <label for="descripcion" class="form-label">Descripción</label>
-            <textarea class="form-control" id="descripcion" name="descripcion" rows="3" required></textarea>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-primary">Guardar Reclamo</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
+
 
 <!-- Modales para editar reclamos existentes -->
 {% for reclamo in reclamos %}

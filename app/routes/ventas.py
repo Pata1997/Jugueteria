@@ -57,9 +57,9 @@ def apertura_caja():
 def ver_apertura(id):
     apertura = AperturaCaja.query.get_or_404(id)
     ventas = apertura.ventas.all()
-    total_ventas = sum(float(v.total or 0) for v in ventas)
-    total_pagadas = sum(float(v.total or 0) for v in ventas if v.estado_pago == 'pagado')
-    total_pendientes = sum(float(v.total or 0) for v in ventas if v.estado_pago != 'pagado')
+    total_ventas = sum(Decimal(v.total or 0) for v in ventas)
+    total_pagadas = sum(Decimal(v.total or 0) for v in ventas if v.estado_pago == 'pagado')
+    total_pendientes = sum(Decimal(v.total or 0) for v in ventas if v.estado_pago != 'pagado')
     return render_template(
         'ventas/ver_apertura.html',
         apertura=apertura,
@@ -101,8 +101,8 @@ def arqueo_caja(id):
     for venta in apertura.ventas:
         for pago in venta.pagos:
             if pago.forma_pago not in totales_por_forma:
-                totales_por_forma[pago.forma_pago] = 0
-            totales_por_forma[pago.forma_pago] += float(pago.monto)
+                totales_por_forma[pago.forma_pago] = Decimal(0)
+            totales_por_forma[pago.forma_pago] += Decimal(pago.monto or 0)
     
     return render_template('ventas/arqueo_caja.html', 
                          apertura=apertura, 
@@ -111,6 +111,7 @@ def arqueo_caja(id):
 # ===== VENTAS =====
 @bp.route('/')
 @login_required
+@require_roles('admin', 'caja', 'vendedor')
 def listar():
     page = request.args.get('page', 1, type=int)
     fecha_desde = request.form.get('fecha_desde')
@@ -128,9 +129,9 @@ def listar():
     )
     
     # Totales para el pie de tabla
-    total_ventas = sum(float(v.total or 0) for v in ventas.items)
-    total_pagado = sum(float(getattr(v, 'monto_pagado', 0) or 0) for v in ventas.items)
-    total_saldo = sum(float(getattr(v, 'saldo_pendiente', 0) or 0) for v in ventas.items)
+    total_ventas = sum(Decimal(v.total or 0) for v in ventas.items)
+    total_pagado = sum(Decimal(getattr(v, 'monto_pagado', 0) or 0) for v in ventas.items)
+    total_saldo = sum(Decimal(getattr(v, 'saldo_pendiente', 0) or 0) for v in ventas.items)
     
     return render_template(
         'ventas/listar.html',
@@ -361,18 +362,18 @@ def facturar(id):
                 flash('Debe registrar al menos una forma de pago', 'warning')
                 return redirect(url_for('ventas.facturar', id=id))
             
-            total_pagado = 0
-            total_efectivo_entregado = 0
+            total_pagado = Decimal(0)
+            total_efectivo_entregado = Decimal(0)
             efectivo_forma_ids = [fp.id for fp in FormaPago.query.filter(FormaPago.nombre.ilike('%efectivo%')).all()]
             print(f"[DEBUG] efectivo_forma_ids: {efectivo_forma_ids}")
             print(f"[DEBUG] pagos_list: {pagos_list}")
             for pag in pagos_list:
-                monto_pago = float(pag['monto'])
+                monto_pago = Decimal(str(pag['monto']))
                 forma_pago_id = int(pag.get('forma_pago_id')) if pag.get('forma_pago_id') is not None else None
                 print(f"[DEBUG] Procesando pago: {pag}, monto_pago: {monto_pago}, forma_pago_id: {forma_pago_id}")
                 if forma_pago_id in efectivo_forma_ids:
                     total_efectivo_entregado += monto_pago
-                    neto_efectivo = min(monto_pago, float(venta.total) - total_pagado)
+                    neto_efectivo = min(monto_pago, Decimal(venta.total) - total_pagado)
                     print(f"[DEBUG] Efectivo entregado: {monto_pago}, neto_efectivo: {neto_efectivo}, total_efectivo_entregado: {total_efectivo_entregado}")
                     pago = Pago(
                         venta_id=venta.id,
@@ -396,9 +397,13 @@ def facturar(id):
                     db.session.add(pago)
                     total_pagado += monto_pago
                 print(f"[DEBUG] total_pagado: {total_pagado}")
-            # Calcular vuelto usando el total de efectivo entregado
-            vuelto = max(0, total_efectivo_entregado - float(venta.total))
-            print(f"[DEBUG] total_efectivo_entregado: {total_efectivo_entregado}, venta.total: {venta.total}, vuelto: {vuelto}")
+            # Calcular vuelto: solo se puede devolver hasta el efectivo entregado, y solo si el total pagado supera el total de la venta
+            excedente = total_pagado - Decimal(venta.total)
+            if excedente > 0:
+                vuelto = min(total_efectivo_entregado, excedente)
+            else:
+                vuelto = Decimal(0)
+            print(f"[DEBUG] total_efectivo_entregado: {total_efectivo_entregado}, venta.total: {venta.total}, total_pagado: {total_pagado}, excedente: {excedente}, vuelto: {vuelto}")
             
             # Actualizar estado de pago
             venta.actualizar_estado_pago()

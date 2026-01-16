@@ -331,6 +331,9 @@ def membrete(elements, styles, empresa: ConfiguracionEmpresa | None):
 @bp.route('/')
 @login_required
 def index():
+    if hasattr(current_user, 'rol') and current_user.rol == 'caja':
+        flash('No tiene permiso para acceder a los reportes.', 'danger')
+        return redirect(url_for('dashboard'))
     print("[DEBUG] Ejecutando reportes.index")
     return render_template('reportes/index.html')
 
