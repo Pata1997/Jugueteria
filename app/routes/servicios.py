@@ -1,5 +1,20 @@
 
 
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+from flask_login import login_required, current_user
+from app.utils.roles import require_roles
+from app import db
+from app.models import (TipoServicio, SolicitudServicio, Presupuesto, PresupuestoDetalle,
+                        OrdenServicio, OrdenServicioDetalle, Reclamo, ReclamoSeguimiento,
+                        Cliente, Producto, Venta, VentaDetalle, Usuario)
+from datetime import datetime, date
+from app.utils import registrar_bitacora
+
+bp = Blueprint('servicios', __name__, url_prefix='/servicios')
+
+
+
+
 
 # Ruta para editar reclamo (POST)
 @bp.route('/reclamos/<int:id>', methods=['POST'])
@@ -15,21 +30,6 @@ def editar_reclamo(id):
     return redirect(url_for('servicios.reclamos'))
 
 # ...existing code...
-
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
-from flask_login import login_required, current_user
-from app.utils.roles import require_roles
-from app import db
-from app.models import (TipoServicio, SolicitudServicio, Presupuesto, PresupuestoDetalle,
-                        OrdenServicio, OrdenServicioDetalle, Reclamo, ReclamoSeguimiento,
-                        Cliente, Producto, Venta, VentaDetalle, Usuario)
-from datetime import datetime, date
-from app.utils import registrar_bitacora
-
-bp = Blueprint('servicios', __name__, url_prefix='/servicios')
-
-
-
 
 @bp.route('/api/buscar_factura')
 @login_required
@@ -76,6 +76,31 @@ def nuevo_reclamo():
 @require_roles('admin', 'tecnico', 'recepcion')
 def tipos():
     tipos = TipoServicio.query.filter_by(activo=True).all()
+    from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+    from flask_login import login_required, current_user
+    from app.utils.roles import require_roles
+    from app import db
+    from app.models import (TipoServicio, SolicitudServicio, Presupuesto, PresupuestoDetalle,
+                            OrdenServicio, OrdenServicioDetalle, Reclamo, ReclamoSeguimiento,
+                            Cliente, Producto, Venta, VentaDetalle, Usuario)
+    from datetime import datetime, date
+    from app.utils import registrar_bitacora
+
+    bp = Blueprint('servicios', __name__, url_prefix='/servicios')
+
+
+    # Ruta para editar reclamo (POST)
+    @bp.route('/reclamos/<int:id>', methods=['POST'])
+    @login_required
+    def editar_reclamo(id):
+        reclamo = Reclamo.query.get_or_404(id)
+        estado = request.form.get('estado')
+        solucion = request.form.get('solucion')
+        reclamo.estado = estado
+        reclamo.solucion = solucion
+        db.session.commit()
+        flash('Reclamo actualizado correctamente', 'success')
+        return redirect(url_for('servicios.reclamos'))
     return render_template('servicios/tipos.html', tipos=tipos)
 
 @bp.route('/tipos/crear', methods=['POST'])
