@@ -34,18 +34,3 @@ class Usuario(UserMixin, db.Model):
     def __repr__(self):
         return f'<Usuario {self.username}>'
 
-class AuditLog(db.Model):
-    __tablename__ = 'audit_logs'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'))
-    accion = db.Column(db.String(50), nullable=False)
-    modulo = db.Column(db.String(50), nullable=False)
-    descripcion = db.Column(db.Text)
-    ip_address = db.Column(db.String(45))
-    fecha = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    usuario = db.relationship('Usuario', backref='audit_logs')
-    
-    def __repr__(self):
-        return f'<AuditLog {self.accion} - {self.modulo}>'
