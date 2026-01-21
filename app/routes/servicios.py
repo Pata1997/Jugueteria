@@ -75,18 +75,9 @@ def nuevo_reclamo():
 @login_required
 @require_roles('admin', 'tecnico', 'recepcion')
 def tipos():
+    from app.models import TipoServicio
     tipos = TipoServicio.query.filter_by(activo=True).all()
-    from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
-    from flask_login import login_required, current_user
-    from app.utils.roles import require_roles
-    from app import db
-    from app.models import (TipoServicio, SolicitudServicio, Presupuesto, PresupuestoDetalle,
-                            OrdenServicio, OrdenServicioDetalle, Reclamo, ReclamoSeguimiento,
-                            Cliente, Producto, Venta, VentaDetalle, Usuario)
-    from datetime import datetime, date
-    from app.utils import registrar_bitacora
-
-    bp = Blueprint('servicios', __name__, url_prefix='/servicios')
+    return render_template('servicios/tipos.html', tipos=tipos)
 
 
     # Ruta para editar reclamo (POST)

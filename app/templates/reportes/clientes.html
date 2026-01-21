@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Reporte de Clientes</h2>
+    <div class="mb-3">
+        <a class="btn btn-success" href="{{ url_for('reportes.clientes_pdf') }}" target="_blank">
+            <i class="fas fa-file-pdf"></i> Descargar PDF
+        </a>
+    </div>
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Documento</th>
+                <th>Teléfono</th>
+                <th>Email</th>
+                <th>Dirección</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in datos_clientes %}
+            <tr>
+                <td>{{ c.cliente.id }}</td>
+                <td>{{ c.cliente.nombre }}</td>
+                <td>{{ c.cliente.documento }}</td>
+                <td>{{ c.cliente.telefono }}</td>
+                <td>{{ c.cliente.email }}</td>
+                <td>{{ c.cliente.direccion }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="text-center">No hay clientes registrados.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

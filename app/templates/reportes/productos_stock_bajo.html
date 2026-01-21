@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Productos con Stock Bajo</h2>
+    <div class="mb-3">
+        <a class="btn btn-success" href="{{ url_for('reportes.productos_stock_bajo_pdf') }}" target="_blank">
+            <i class="fas fa-file-pdf"></i> Descargar PDF
+        </a>
+    </div>
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th>Stock Actual</th>
+                <th>Stock Mínimo</th>
+                <th>Precio Venta</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in productos %}
+            <tr>
+                <td>{{ p.codigo }}</td>
+                <td>{{ p.nombre }}</td>
+                <td>{{ '{:,.0f}'.format(p.stock_actual) }}</td>
+                <td>{{ '{:,.0f}'.format(p.stock_minimo) }}</td>
+                <td>Gs. {{ '{:,.2f}'.format(p.precio_venta) }}</td>
+                <td>{{ 'Activo' if p.activo else 'Inactivo' }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="text-center">No hay productos con stock bajo.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

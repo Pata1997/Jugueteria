@@ -19,6 +19,122 @@ from app.models import Compra, Proveedor, Venta, Producto, Cliente, Configuracio
 # =====================================================
 bp = Blueprint('reportes', __name__, url_prefix='/reportes')
 
+@bp.route('/clientes/pdf', endpoint='clientes_pdf')
+@login_required
+def clientes_pdf():
+    from io import BytesIO
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    datos = []
+    clientes = Cliente.query.all()
+    for c in clientes:
+        datos.append([
+            c.id,
+            c.nombre,
+            c.documento,
+            c.telefono,
+            c.email,
+            c.direccion
+        ])
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    elements = []
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=18, alignment=1, spaceAfter=20)
+    elements.append(Paragraph("Reporte de Clientes", title_style))
+    elements.append(Spacer(1, 12))
+    data = [['ID', 'Nombre', 'Documento', 'Teléfono', 'Email', 'Dirección']] + datos
+    table = Table(data, colWidths=[40, 120, 80, 80, 120, 120])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2980b9')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#34495e')),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 11),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('TOPPADDING', (0, 0), (-1, 0), 8),
+    ]))
+    elements.append(table)
+    doc.build(elements)
+    buffer.seek(0)
+    response = make_response(buffer.getvalue())
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = 'attachment; filename=reporte_clientes.pdf'
+    return response
+
+from flask import Blueprint, render_template, request, make_response, redirect, url_for, flash, jsonify
+from flask_login import login_required
+from flask_login import current_user
+from app.utils.roles import require_roles
+from io import BytesIO
+from datetime import datetime, timedelta
+from reportlab.lib.pagesizes import A4, letter
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.pdfgen import canvas
+from app import db
+from app.models import Compra, Proveedor, Venta, Producto, Cliente, ConfiguracionEmpresa, OrdenServicio, AperturaCaja, Caja, Usuario
+
+# =====================================================
+# BLUEPRINT
+# =====================================================
+bp = Blueprint('reportes', __name__, url_prefix='/reportes')
+
+
+@bp.route('/productos/pdf')
+@login_required
+def productos_pdf():
+    from io import BytesIO
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    productos = Producto.query.filter_by(activo=True).all()
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    elements = []
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=18, alignment=1, spaceAfter=20)
+    elements.append(Paragraph("Reporte de Productos", title_style))
+    elements.append(Spacer(1, 12))
+    data = [['Código', 'Nombre', 'Stock Actual', 'Stock Mínimo', 'Precio Venta', 'Estado']]
+    for p in productos:
+        data.append([
+            p.codigo,
+            p.nombre,
+            f"{p.stock_actual:,.0f}",
+            f"{p.stock_minimo:,.0f}",
+            f"Gs. {p.precio_venta:,.2f}",
+            'Activo' if p.activo else 'Inactivo'
+        ])
+    table = Table(data, colWidths=[70, 180, 70, 70, 90, 70])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2980b9')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#34495e')),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#f9e79f')),
+        ('TEXTCOLOR', (0, -1), (-1, -1), colors.HexColor('#2c3e50')),
+        ('FONTSIZE', (0, 0), (-1, -1), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+        ('TOPPADDING', (0, 0), (-1, 0), 8),
+        ('BOTTOMPADDING', (0, -1), (-1, -1), 8),
+        ('TOPPADDING', (0, -1), (-1, -1), 8),
+    ]))
+    elements.append(table)
+    doc.build(elements)
+    buffer.seek(0)
+    response = make_response(buffer.getvalue())
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = 'attachment; filename=reporte_productos.pdf'
+    return response
+
 @bp.route('/caja')
 @login_required
 @require_roles('admin', 'caja')
@@ -331,7 +447,7 @@ def membrete(elements, styles, empresa: ConfiguracionEmpresa | None):
 @bp.route('/')
 @login_required
 def index():
-    if hasattr(current_user, 'rol') and current_user.rol == 'caja':
+    if hasattr(current_user, 'rol') and current_user.rol in ['caja', 'tecnico']:
         flash('No tiene permiso para acceder a los reportes.', 'danger')
         return redirect(url_for('dashboard'))
     print("[DEBUG] Ejecutando reportes.index")
@@ -344,6 +460,7 @@ def index():
 @bp.route('/ventas')
 @login_required
 def ventas():
+    from datetime import datetime, timedelta
     fecha_desde = request.args.get(
         'fecha_desde',
         (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
@@ -353,9 +470,12 @@ def ventas():
         datetime.now().strftime('%Y-%m-%d')
     )
 
+    fecha_desde_dt = datetime.strptime(fecha_desde, '%Y-%m-%d')
+    fecha_hasta_dt = datetime.strptime(fecha_hasta, '%Y-%m-%d')
+
     ventas = Venta.query.filter(
-        Venta.fecha_venta >= fecha_desde,
-        Venta.fecha_venta <= fecha_hasta,
+        Venta.fecha_venta >= fecha_desde_dt,
+        Venta.fecha_venta <= fecha_hasta_dt,
         Venta.estado == 'completada'
     ).all()
 
@@ -445,19 +565,22 @@ def ventas_pdf():
     elements.append(Spacer(1, 10))
 
     # Ajustar ancho de columnas para que no se salga el texto
-    data = [['Factura', 'Fecha', 'Cliente', 'Total']]
+    data = [['Factura', 'Fecha', 'Cliente', 'Vendedor', 'Total']]
     for v in ventas:
+        cliente = v.cliente.nombre if hasattr(v, 'cliente') and v.cliente else str(v.cliente_id)
+        vendedor = v.vendedor.nombre_completo if hasattr(v, 'vendedor') and v.vendedor else str(v.vendedor_id)
         data.append([
             v.numero_factura,
             v.fecha_venta.strftime('%d/%m/%Y'),
-            v.cliente.nombre[:30],
+            cliente[:30],
+            vendedor[:30],
             f"Gs. {v.total:,.0f}"
         ])
 
     total = sum(v.total for v in ventas)
-    data.append(['', '', 'TOTAL', f"Gs. {total:,.0f}"])
+    data.append(['', '', '', 'TOTAL', f"Gs. {total:,.0f}"])
 
-    table = Table(data, colWidths=[120, 70, 180, 80])
+    table = Table(data, colWidths=[100, 70, 120, 120, 80])
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2980b9')),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),

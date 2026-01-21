@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Reporte de Ventas</h2>
+    <form method="get" class="row g-3 mb-4">
+        <div class="col-auto">
+            <label for="fecha_desde" class="form-label">Desde:</label>
+            <input type="date" id="fecha_desde" name="fecha_desde" class="form-control" value="{{ fecha_desde }}">
+        </div>
+        <div class="col-auto">
+            <label for="fecha_hasta" class="form-label">Hasta:</label>
+            <input type="date" id="fecha_hasta" name="fecha_hasta" class="form-control" value="{{ fecha_hasta }}">
+        </div>
+        <div class="col-auto align-self-end">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+        </div>
+    </form>
+    <div class="mb-3">
+        <a class="btn btn-success" href="{{ url_for('reportes.ventas_pdf', fecha_desde=fecha_desde, fecha_hasta=fecha_hasta) }}" target="_blank">
+            <i class="fas fa-file-pdf"></i> Descargar PDF
+        </a>
+    </div>
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th># Factura</th>
+                <th>Fecha</th>
+                <th>Cliente</th>
+                <th>Vendedor</th>
+                <th>Total</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for v in ventas %}
+            <tr>
+                <td>{{ v.numero_factura }}</td>
+                <td>{{ v.fecha_venta.strftime('%Y-%m-%d') }}</td>
+                <td>{{ v.cliente.nombre if v.cliente else v.cliente_id }}</td>
+                <td>{{ v.vendedor.nombre_completo if v.vendedor else v.vendedor_id }}</td>
+                <td>Gs. {{ '{:,.2f}'.format(v.total) }}</td>
+                <td>{{ v.estado }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" class="text-center">No hay ventas en el rango seleccionado.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <th colspan="4" class="text-end">Total:</th>
+                <th colspan="2">Gs. {{ '{:,.2f}'.format(total) }}</th>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+{% endblock %}

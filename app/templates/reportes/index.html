@@ -4,74 +4,48 @@
 {% block page_title %}Centro de Reportes{% endblock %}
 
 {% block content %}
-<div class="row">
-    {% set rol = current_user.rol %}
+
     <div class="row">
-        {% if rol == 'caja' %}
-        <!-- Reportes de Caja SOLO para cajero -->
-        <div class="col-md-6 mb-3">
+        <div class="col-md-12 mb-3">
             <div class="card">
-                <div class="card-header bg-secondary text-white">
-                    <i class="fas fa-cash-register"></i> Reportes de Caja
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-list"></i> Todos los Reportes Disponibles
                 </div>
                 <div class="card-body">
-                    <form id="form-buscar-cajas" class="mb-3">
-                        <div class="input-group">
-                            <input type="date" name="fecha" id="fecha-caja" class="form-control" required>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-search"></i> Buscar Cajas Cerradas
-                            </button>
-                        </div>
-                    </form>
-                    <div id="resultados-cajas"></div>
-                </div>
-            </div>
-        </div>
-        {% else %}
-        <!-- Resto de reportes para otros roles -->
-        <!-- ...existing code... -->
-        {% endif %}
-    </div>
-
-    {% if rol != 'caja' %}
-        <!-- Reportes Financieros y Reporte Personalizado solo para otros roles -->
-        <!-- ...existing code para financieros y personalizado... -->
-    {% endif %}
-        <div class="card">
-            <div class="card-header bg-secondary text-white">
-                <i class="fas fa-cash-register"></i> Reportes de Caja
-            </div>
-            <div class="card-body">
-                <form id="form-buscar-cajas" class="mb-3">
-                    <div class="input-group">
-                        <input type="date" name="fecha" id="fecha-caja" class="form-control" required>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search"></i> Buscar Cajas Cerradas
-                        </button>
+                    <div class="list-group">
+                        <a href="{{ url_for('reportes.financiero_pdf') }}" target="_blank" class="list-group-item list-group-item-action">
+                            <i class="fas fa-balance-scale"></i> Balance Financiero Mensual (PDF)
+                        </a>
+                        <a href="{{ url_for('reportes.compras_pdf') }}" target="_blank" class="list-group-item list-group-item-action">
+                            <i class="fas fa-shopping-cart"></i> Reporte de Compras (PDF)
+                        </a>
+                        <a href="{{ url_for('reportes.servicios_pdf') }}" target="_blank" class="list-group-item list-group-item-action">
+                            <i class="fas fa-tools"></i> Reporte de Servicios (PDF)
+                        </a>
+                        <a href="{{ url_for('reportes.ventas') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-cash-register"></i> Reporte de Ventas (HTML)
+                        </a>
+                        <a href="{{ url_for('reportes.ventas_pdf') }}" target="_blank" class="list-group-item list-group-item-action">
+                            <i class="fas fa-file-invoice-dollar"></i> Reporte de Ventas (PDF)
+                        </a>
+                        <a href="{{ url_for('reportes.productos') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-box"></i> Reporte de Productos
+                        </a>
+                        <a href="{{ url_for('reportes.productos_stock_bajo') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-exclamation-triangle"></i> Productos con Stock Bajo
+                        </a>
+                        <a href="{{ url_for('reportes.clientes') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-users"></i> Reporte de Clientes
+                        </a>
+                        <a href="{{ url_for('reportes.cajas_cerradas') }}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-cash-register"></i> Cajas Cerradas
+                        </a>
+                        <!-- Agrega aquí más enlaces a reportes según tus rutas -->
                     </div>
-                </form>
-                <div id="resultados-cajas"></div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Reportes Financieros -->
-    <div class="col-md-6 mb-3">
-        <div class="card">
-            <div class="card-header bg-danger text-white">
-                <i class="fas fa-chart-pie"></i> Reportes Financieros
-            </div>
-            <div class="card-body">
-                <div class="list-group">
-                    <a href="{{ url_for('reportes.financiero_pdf') }}" target="_blank" class="list-group-item list-group-item-action">
-                        <i class="fas fa-balance-scale"></i> Balance Financiero Mensual (PDF)
-                        <span class="float-end"><i class="fas fa-file-pdf text-danger"></i></span>
-                    </a>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
 <!-- Filtros Personalizados -->
 {% block extra_js %}
