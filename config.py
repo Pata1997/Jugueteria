@@ -7,7 +7,7 @@ load_dotenv(os.path.join(basedir, '.env'))
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'postgresql+pg8000://postgres:123456@localhost:5432/jugueteria_db'
+        'postgresql+pg8000://postgres:123456@localhost:5432/jugueteria_db' # No olvidar cambiar el puerto 5432 a 5433
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Configuración de paginación
