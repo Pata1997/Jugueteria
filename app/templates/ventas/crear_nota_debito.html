@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Emitir Nota de Débito</h2>
+    <form method="post" id="form-nd">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label>Emisor</label>
+                    <input type="text" class="form-control" name="emisor" value="{{ empresa.nombre_empresa if empresa else 'Juguetería' }}" readonly>
+                </div>
+                <div class="mb-3">
+                    <label>Cliente</label>
+                    <input type="text" class="form-control" name="cliente" value="{{ venta.cliente.nombre }}" readonly>
+                </div>
+                <div class="mb-3">
+                    <label>Número de Nota de Débito</label>
+                    <input type="text" class="form-control" value="{{ numero_nota }}" readonly>
+                </div>
+                <div class="mb-3">
+                    <label>Fecha de Emisión</label>
+                    <input type="text" class="form-control" name="fecha_emision" value="{{ fecha_emision }}" readonly>
+                </div>
+                <div class="mb-3">
+                    <label>Factura Original</label>
+                    <input type="text" class="form-control" name="factura_original" value="{{ venta.numero_factura }} - {{ venta.fecha_venta.strftime('%d/%m/%Y') }}" readonly>
+                </div>
+            </div>
+            <div class="col-md-6">
+            </div>
+        </div>
+        <div class="mb-3">
+            <label for="motivo" class="form-label">Motivo</label>
+            <input type="text" class="form-control" id="motivo" name="motivo" required>
+        </div>
+        <div class="mb-3">
+            <label for="observaciones" class="form-label">Observaciones</label>
+            <textarea class="form-control" id="observaciones" name="observaciones"></textarea>
+        </div>
+        <h5>Detalle de la Nota de Débito</h5>
+        <table class="table" id="tabla-detalle-nd">
+            <thead>
+                <tr>
+                    <th>Descripción</th>
+                    <th>Cantidad</th>
+                    <th>Precio Unitario</th>
+                    <th>IVA</th>
+                    <th>Subtotal</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Aquí se renderizan los ítems agregados por JS -->
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td><input type="text" id="desc-nuevo" class="form-control" placeholder="Descripción"></td>
+                    <td><input type="number" id="cant-nuevo" class="form-control" value="1" min="1"></td>
+                    <td><input type="text" id="precio-nuevo" class="form-control" value="0"></td>
+                    <td><input type="text" class="form-control" value="10%" disabled></td>
+                    <td></td>
+                    <td><button type="button" class="btn btn-success" id="agregar-detalle">Agregar</button></td>
+                </tr>
+            </tfoot>
+        </table>
+        <input type="hidden" name="detalle_nd_json" id="detalle_nd_json">
+        <div class="row justify-content-end">
+            <div class="col-md-4">
+                <table class="table table-borderless">
+                    <tr>
+                        <th class="text-end">Subtotal:</th>
+                        <td class="text-end">Gs. <span id="subtotal-10">0</span></td>
+                    </tr>
+                    <tr>
+                        <th class="text-end">IVA:</th>
+                        <td class="text-end">Gs. <span id="iva-10">0</span></td>
+                    </tr>
+                    <tr>
+                        <th class="text-end">Total:</th>
+                        <td class="text-end">Gs. <span id="total-nd">0</span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <input type="hidden" name="detalle_nd_json" id="detalle_nd_json">
+        <div class="mb-3">
+            <div id="totales-nd" style="display:none;">
+                <div class="row">
+                    <div class="col-md-3 offset-md-6 text-end">
+                        <strong>Subtotal 10%: Gs. <span id="subtotal-10">0</span></strong>
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <strong>IVA 10%: Gs. <span id="iva-10">0</span></strong>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-3 offset-md-6 text-end">
+                        <strong>Total ND: Gs. <span id="total-nd">0</span></strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Emitir Nota de Débito</button>
+        <a href="{{ url_for('ventas.ver', id=venta.id) }}" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+    <script>
+    let detalleND = [];
+    function recalcularTotalND() {
+        let subtotal10 = 0;
+        let iva10 = 0;
+        let total = 0;
+        detalleND.forEach(d => {
+            const sub = d.cantidad * d.precio_unitario;
+            subtotal10 += sub;
+            iva10 += sub / 11; // IVA incluido en precio
+            total += sub;
+        });
+        console.log('Recalcular ND:', {detalleND, subtotal10, iva10, total});
+        document.getElementById('subtotal-10').innerText = subtotal10.toLocaleString();
+        document.getElementById('iva-10').innerText = iva10.toLocaleString();
+        document.getElementById('total-nd').innerText = total.toLocaleString();
+        document.getElementById('detalle_nd_json').value = JSON.stringify(detalleND);
+    }
+    function renderDetalleND() {
+        const tbody = document.querySelector('#tabla-detalle-nd tbody');
+        tbody.innerHTML = '';
+        detalleND.forEach((d, i) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${d.descripcion}</td>
+                <td>${d.cantidad}</td>
+                <td>Gs. ${parseInt(d.precio_unitario).toLocaleString()}</td>
+                <td>10%</td>
+                <td>Gs. ${(d.cantidad * d.precio_unitario).toLocaleString()}</td>
+                <td><button type="button" class="btn btn-danger btn-sm" onclick="eliminarDetalleND(${i})">Eliminar</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+        console.log('Render ND:', detalleND);
+        recalcularTotalND();
+    }
+    function eliminarDetalleND(idx) {
+        console.log('Eliminar ND idx:', idx);
+        detalleND.splice(idx, 1);
+        renderDetalleND();
+    }
+    document.getElementById('agregar-detalle').onclick = function() {
+        const desc = document.getElementById('desc-nuevo').value.trim();
+        const cant = parseFloat(document.getElementById('cant-nuevo').value);
+        // Permitir puntos o comas como separador de miles
+        let precioStr = document.getElementById('precio-nuevo').value.replace(/\./g, '').replace(/,/g, '');
+        const precio = parseFloat(precioStr);
+        console.log('Agregar ND:', {desc, cant, precio});
+        if (!desc || cant <= 0 || isNaN(precio) || precio < 0) return;
+        detalleND.push({ descripcion: desc, cantidad: cant, precio_unitario: precio, iva: 10 });
+        renderDetalleND();
+        document.getElementById('desc-nuevo').value = '';
+        document.getElementById('cant-nuevo').value = 1;
+        document.getElementById('precio-nuevo').value = 0;
+    };
+</script>
+{% endblock %}

@@ -71,12 +71,21 @@
                             {% endif %}
                         </td>
                         <td>
-                            <a href="{{ url_for('ventas.ver', id=venta.id) }}" class="btn btn-sm btn-info" title="Ver">
-                                <i class="fas fa-eye"></i>
-                            </a>
                             {% if venta.saldo_pendiente > 0 %}
                             <a href="{{ url_for('ventas.facturar', id=venta.id) }}" class="btn btn-sm btn-success" title="Facturar y Cobrar">
                                 <i class="fas fa-file-invoice"></i>
+                            </a>
+                            {% endif %}
+                            {# Botón NC: solo si no existe nota de crédito para esta venta #}
+                            {% if not venta.notas_credito or venta.notas_credito|length == 0 %}
+                            <a href="{{ url_for('ventas.emitir_nota_credito', venta_id=venta.id) }}" class="btn btn-sm btn-warning" title="Emitir Nota de Crédito">
+                                NC
+                            </a>
+                            {% endif %}
+                            {# Botón ND: solo si no existe nota de débito para esta venta #}
+                            {% if not venta.notas_debito or venta.notas_debito|length == 0 %}
+                            <a href="{{ url_for('ventas.crear_nota_debito', venta_id=venta.id) }}" class="btn btn-sm btn-danger" title="Emitir Nota de Débito">
+                                ND
                             </a>
                             {% endif %}
                         </td>

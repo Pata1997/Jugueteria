@@ -1,5 +1,4 @@
-
-
+# ==== IMPORTS ====
 from flask import Blueprint, render_template, request, make_response, redirect, url_for, flash, jsonify
 from flask_login import login_required
 from flask_login import current_user
@@ -14,19 +13,46 @@ from reportlab.pdfgen import canvas
 from app import db
 from app.models import Compra, Proveedor, Venta, Producto, Cliente, ConfiguracionEmpresa, OrdenServicio, AperturaCaja, Caja, Usuario
 
-# =====================================================
-# BLUEPRINT
-# =====================================================
+
+# ==== BLUEPRINT ====
 bp = Blueprint('reportes', __name__, url_prefix='/reportes')
+
+# ==== RUTAS ====
+@bp.route('/personalizado', methods=['POST'], endpoint='reporte_personalizado')
+@login_required
+def reporte_personalizado():
+    tipo = request.form.get('tipo_reporte')
+    fecha_desde = request.form.get('fecha_desde')
+    fecha_hasta = request.form.get('fecha_hasta')
+    # Redirigir o llamar a la función correspondiente según el tipo
+    if tipo == 'financiero':
+        # Redirige al balance financiero mensual
+        fecha = datetime.strptime(fecha_desde, '%Y-%m-%d')
+        return redirect(url_for('reportes.financiero_pdf', mes=fecha.month, anio=fecha.year))
+    elif tipo == 'compras':
+        return redirect(url_for('reportes.compras_pdf', desde=fecha_desde, hasta=fecha_hasta))
+    elif tipo == 'servicios':
+        return redirect(url_for('reportes.servicios_pdf', desde=fecha_desde, hasta=fecha_hasta))
+    elif tipo == 'ventas_html':
+        return redirect(url_for('reportes.ventas', fecha_desde=fecha_desde, fecha_hasta=fecha_hasta))
+    elif tipo == 'ventas_pdf':
+        return redirect(url_for('reportes.ventas_pdf', fecha_desde=fecha_desde, fecha_hasta=fecha_hasta))
+    elif tipo == 'productos':
+        # Si quieres filtrar productos por fecha, deberías crear un endpoint específico
+        return redirect(url_for('reportes.productos'))
+    elif tipo == 'stock_bajo':
+        return redirect(url_for('reportes.productos_stock_bajo_pdf'))
+    elif tipo == 'clientes':
+        return redirect(url_for('reportes.clientes_pdf'))
+    elif tipo == 'cajas_cerradas':
+        return redirect(url_for('reportes.cajas_cerradas'))
+    else:
+        flash('Tipo de reporte no válido', 'danger')
+        return redirect(url_for('reportes.index'))
 
 @bp.route('/clientes/pdf', endpoint='clientes_pdf')
 @login_required
 def clientes_pdf():
-    from io import BytesIO
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     datos = []
     clientes = Cliente.query.all()
     for c in clientes:
@@ -65,24 +91,6 @@ def clientes_pdf():
     response.headers['Content-Disposition'] = 'attachment; filename=reporte_clientes.pdf'
     return response
 
-from flask import Blueprint, render_template, request, make_response, redirect, url_for, flash, jsonify
-from flask_login import login_required
-from flask_login import current_user
-from app.utils.roles import require_roles
-from io import BytesIO
-from datetime import datetime, timedelta
-from reportlab.lib.pagesizes import A4, letter
-from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.pdfgen import canvas
-from app import db
-from app.models import Compra, Proveedor, Venta, Producto, Cliente, ConfiguracionEmpresa, OrdenServicio, AperturaCaja, Caja, Usuario
-
-# =====================================================
-# BLUEPRINT
-# =====================================================
-bp = Blueprint('reportes', __name__, url_prefix='/reportes')
 
 
 @bp.route('/productos/pdf')
@@ -403,8 +411,10 @@ def servicios_pdf():
 def cajas_cerradas():
     from datetime import datetime, timedelta
     fecha = request.args.get('fecha')
+    # Si no hay parámetro de fecha, mostrar el formulario HTML
     if not fecha:
-        return jsonify([])
+        return render_template('reportes/cajas_cerradas.html')
+    # Si hay parámetro de fecha, devolver JSON (para AJAX)
     try:
         fecha_dt = datetime.strptime(fecha, '%Y-%m-%d')
     except Exception:
@@ -451,7 +461,13 @@ def index():
         flash('No tiene permiso para acceder a los reportes.', 'danger')
         return redirect(url_for('dashboard'))
     print("[DEBUG] Ejecutando reportes.index")
-    return render_template('reportes/index.html')
+    from datetime import date, datetime
+    hoy = date.today()
+    mes_actual = hoy.month
+    anio_actual = hoy.year
+    primer_dia = hoy.replace(day=1).strftime('%Y-%m-%d')
+    hoy_str = hoy.strftime('%Y-%m-%d')
+    return render_template('reportes/index.html', mes_actual=mes_actual, anio_actual=anio_actual, primer_dia=primer_dia, hoy_str=hoy_str)
 
 
 # =====================================================

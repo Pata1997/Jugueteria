@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Emitir Nota de Crédito</h2>
+    <form method="post">
+        <div class="mb-3">
+            <label class="form-label">Factura Asociada</label>
+            <input type="text" class="form-control" value="{{ venta.numero_factura }}" readonly>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Motivo *</label>
+            <input type="text" class="form-control" name="motivo" required maxlength="200">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Monto *</label>
+            <input type="number" class="form-control" name="monto" required min="1" max="{{ venta.total }}">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Observaciones</label>
+            <textarea class="form-control" name="observaciones" rows="2"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Emitir Nota de Crédito</button>
+        <a href="{{ url_for('ventas.listar') }}" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+{% endblock %}

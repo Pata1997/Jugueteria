@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Cobrar Nota de Débito</h2>
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5>Nota de Débito: <span class="text-primary">{{ nota.numero_nota }}</span></h5>
+            <p>Factura Referenciada: <strong>{{ nota.venta.numero_factura }}</strong></p>
+            <p>Cliente: <strong>{{ nota.venta.cliente.nombre }}</strong></p>
+            <p>Total ND: <strong>Gs. {{ '{:,.0f}'.format(nota.monto) }}</strong></p>
+            <p>Saldo Pendiente: <strong>Gs. {{ '{:,.0f}'.format(nota.monto - pagado) }}</strong></p>
+        </div>
+    </div>
+    <form method="post">
+        <div class="mb-3">
+            <label for="forma_pago" class="form-label">Forma de Pago</label>
+            <select class="form-control" id="forma_pago" name="forma_pago_id" required>
+                <option value="">Seleccione...</option>
+                {% for fp in formas_pago %}
+                <option value="{{ fp.id }}">{{ fp.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="monto" class="form-label">Monto a Cobrar</label>
+            <input type="number" class="form-control" id="monto" name="monto" min="1" max="{{ nota.monto - pagado }}" value="{{ nota.monto - pagado }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="referencia" class="form-label">Referencia</label>
+            <input type="text" class="form-control" id="referencia" name="referencia">
+        </div>
+        <div class="mb-3">
+            <label for="observaciones" class="form-label">Observaciones</label>
+            <textarea class="form-control" id="observaciones" name="observaciones"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Registrar Cobro</button>
+        <a href="{{ url_for('ventas.listar_nc_nd') }}" class="btn btn-secondary">Cancelar</a>
+    </form>
+    <hr>
+    <h5>Pagos Realizados</h5>
+    <table class="table table-sm">
+        <thead>
+            <tr><th>Fecha</th><th>Forma de Pago</th><th>Monto</th><th>Referencia</th></tr>
+        </thead>
+        <tbody>
+        {% for pago in nota.pagos %}
+            <tr>
+                <td>{{ pago.fecha_pago.strftime('%d/%m/%Y %H:%M') }}</td>
+                <td>{{ pago.forma_pago.nombre }}</td>
+                <td>Gs. {{ '{:,.0f}'.format(pago.monto) }}</td>
+                <td>{{ pago.referencia }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

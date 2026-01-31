@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Notas de Crédito y Débito</h2>
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+            <a class="nav-link active" id="tab-nc" href="#nc" data-bs-toggle="tab">Notas de Crédito</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="tab-nd" href="#nd" data-bs-toggle="tab">Notas de Débito</a>
+        </li>
+    </ul>
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="nc">
+            <table class="table table-bordered table-sm">
+                <thead>
+                    <tr>
+                        <th>N° Nota</th>
+                        <th>Fecha</th>
+                        <th>Cliente</th>
+                        <th>Factura</th>
+                        <th>Motivo</th>
+                        <th>Monto</th>
+                        <th>Usuario</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for nc in notas_credito %}
+                    <tr>
+                        <td>{{ nc.numero_nota }}</td>
+                        <td>{{ nc.fecha_emision.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ nc.venta.cliente.nombre }}</td>
+                        <td>{{ nc.venta.numero_factura }}</td>
+                        <td>{{ nc.motivo }}</td>
+                        <td>Gs. {{ '{:,.0f}'.format(nc.monto) }}</td>
+                        <td>{{ nc.usuario.username }}</td>
+                        <td>
+                            <a href="{{ url_for('ventas.descargar_nota_credito_pdf', nota_id=nc.id) }}" class="btn btn-sm btn-primary">PDF</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="tab-pane fade" id="nd">
+            <table class="table table-bordered table-sm">
+                <thead>
+                    <tr>
+                        <th>N° Nota</th>
+                        <th>Fecha</th>
+                        <th>Cliente</th>
+                        <th>Factura</th>
+                        <th>Motivo</th>
+                        <th>Monto</th>
+                        <th>Usuario</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for nd in notas_debito %}
+                    <tr>
+                        <td>{{ nd.numero_nota }}</td>
+                        <td>{{ nd.fecha_emision.strftime('%d/%m/%Y') }}</td>
+                        <td>{{ nd.venta.cliente.nombre }}</td>
+                        <td>{{ nd.venta.numero_factura }}</td>
+                        <td>{{ nd.motivo }}</td>
+                        <td>Gs. {{ '{:,.0f}'.format(nd.monto) }}</td>
+                        <td>{{ nd.usuario.username }}</td>
+                        <td>
+                            <a href="{{ url_for('ventas.descargar_nota_debito_pdf', nota_id=nd.id) }}" class="btn btn-sm btn-primary">PDF</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

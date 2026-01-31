@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Cajas Cerradas{% endblock %}
+{% block page_title %}Cajas Cerradas{% endblock %}
+
+{% block content %}
+<div class="card mt-3">
+    <div class="card-header bg-dark text-white">
+        <i class="fas fa-cash-register"></i> Buscar Cajas Cerradas por Fecha
+    </div>
+    <div class="card-body">
+        <form id="form-buscar-cajas">
+            <div class="row">
+                <div class="col-md-4">
+                    <label for="fecha-caja" class="form-label">Fecha</label>
+                    <input type="date" class="form-control" id="fecha-caja" name="fecha" required>
+                </div>
+                <div class="col-md-4 align-self-end">
+                    <button type="submit" class="btn btn-primary">Buscar</button>
+                </div>
+            </div>
+        </form>
+        <div id="resultados-cajas" class="mt-4"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('form-buscar-cajas').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const fecha = document.getElementById('fecha-caja').value;
+    if (!fecha) return;
+    const resultados = document.getElementById('resultados-cajas');
+    resultados.innerHTML = '<div class="text-center py-3"><div class="spinner-border"></div> Buscando...</div>';
+    fetch(`/reportes/cajas-cerradas?fecha=${fecha}`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data || !data.length) {
+                resultados.innerHTML = '<div class="alert alert-warning text-center">No se encontraron cajas cerradas para esa fecha.</div>';
+                return;
+            }
+            let html = `<div class='table-responsive'><table class='table table-sm table-bordered'><thead><tr><th>ID</th><th>Caja</th><th>Cajero</th><th>Apertura</th><th>Cierre</th><th>PDF Arqueo</th></tr></thead><tbody>`;
+            for (const apertura of data) {
+                html += `<tr>` +
+                    `<td>${apertura.id}</td>` +
+                    `<td>${apertura.caja}</td>` +
+                    `<td>${apertura.cajero}</td>` +
+                    `<td>${apertura.fecha_apertura}</td>` +
+                    `<td>${apertura.fecha_cierre}</td>` +
+                    `<td><a href="/caja/arqueo/${apertura.id}?pdf=1" target="_blank" class="btn btn-danger btn-sm"><i class="fas fa-file-pdf"></i> PDF</a></td>` +
+                    `</tr>`;
+            }
+            html += '</tbody></table></div>';
+            resultados.innerHTML = html;
+        })
+        .catch(() => {
+            resultados.innerHTML = '<div class="alert alert-danger text-center">Error al buscar cajas.</div>';
+        });
+});
+</script>
+{% endblock %}

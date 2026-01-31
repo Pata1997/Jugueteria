@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5 text-center">
+    <h4>Generando Nota de Crédito...</h4>
+    <p>La Nota de Crédito se está descargando. Serás redirigido automáticamente a la venta.</p>
+    <a href="{{ venta_url }}" class="btn btn-primary mt-3">Ir a la venta</a>
+</div>
+<script>
+    window.onload = function() {
+        window.open("{{ pdf_url }}", "_blank");
+        setTimeout(function() {
+            window.location.href = "{{ venta_url }}";
+        }, 2000);
+    };
+</script>
+{% endblock %}

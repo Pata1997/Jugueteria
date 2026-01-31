@@ -137,7 +137,7 @@
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <div class="logo">
-            Juguetería El Mundo Feliz
+            {{ empresa.nombre_empresa if empresa else 'Juguetería' }}
         </div>
         
         <nav class="nav flex-column mt-3">
@@ -167,6 +167,9 @@
                 <a class="nav-link" href="{{ url_for('ventas.listar') }}">
                     <i class="fas fa-shopping-cart"></i> Ventas
                 </a>
+                <a class="nav-link ps-4" href="{{ url_for('ventas.listar_nc_nd') }}">
+                    <i class="fas fa-file-alt"></i> Notas de Crédito/Débito
+                </a>
                 {% endif %}
                 {% if rol in ['admin', 'caja'] %}
                 <a class="nav-link" href="{{ url_for('compras.listar') }}">
@@ -174,6 +177,9 @@
                 </a>
                 <a class="nav-link ps-4" href="{{ url_for('compras.pendientes_pago') }}">
                     <i class="fas fa-clock"></i> Pendientes de Pago
+                </a>
+                <a class="nav-link ps-4" href="{{ url_for('compras.cuentas_por_pagar_compras') }}">
+                    <i class="fas fa-hand-holding-usd"></i> Compras a Crédito
                 </a>
                 {% endif %}
                 {% if rol in ['admin', 'caja'] %}

@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Emitir Nota de Crédito</h2>
+    <form id="formNotaCredito" method="post" action="{{ url_for('ventas.emitir_nota_credito', venta_id=venta.id) }}">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label>Emisor</label>
+                    <input type="text" class="form-control" name="emisor" value="{{ emisor }}" readonly>
+                </div>
+                <div class="mb-3">
+                    <label>Cliente</label>
+                    <input type="text" class="form-control" name="cliente" value="{{ cliente.nombre }}" readonly>
+                </div>
+                <div class="mb-3">
+                    <label>Número de Nota de Crédito</label>
+                    <input type="text" class="form-control" value="{{ numero_nc }}" readonly>
+                </div>
+                <div class="mb-3">
+                    <label>Fecha de Emisión</label>
+                    <input type="text" class="form-control" name="fecha_emision" value="{{ fecha_emision }}" readonly>
+                </div>
+                <div class="mb-3">
+                    <label>Factura Original</label>
+                    <input type="text" class="form-control" name="factura_original" value="{{ factura_original }}" readonly>
+                </div>
+                <div class="mb-3">
+                    <label>Motivo *</label>
+                    <input type="text" class="form-control" name="motivo" required placeholder="Ej: Devolución de mercadería, Error en precio, etc.">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label>IVA</label>
+                    <select class="form-control" name="iva">
+                        <option value="10">IVA 10%</option>
+                        <option value="5">IVA 5%</option>
+                        <option value="0">Exento</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label>Observaciones</label>
+                    <textarea class="form-control" name="observaciones"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <h5 class="mt-4">Detalle de la Nota de Crédito</h5>
+        <div class="table-responsive">
+            <table class="table table-bordered" id="tablaDetalleNC">
+                <thead>
+                    <tr>
+                        <th>Descripción</th>
+                        <th>Cantidad a Devolver</th>
+                        <th>Precio Unitario</th>
+                        <th>Subtotal</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for det in venta.detalles %}
+                    <tr>
+                        <td>{{ det.descripcion }}</td>
+                        <td>
+                            <input type="number" class="form-control cantidad-nc" 
+                                name="cantidades_nc" value="{{ det.cantidad }}" min="0" max="{{ det.cantidad }}"
+                                data-precio="{{ det.precio_unitario }}">
+                            <input type="hidden" name="ids_detalle_nc" value="{{ det.id }}">
+                        </td>
+                        <td>Gs. {{ '{:,.0f}'.format(det.precio_unitario) }}</td>
+                        <td class="fila-subtotal">Gs. 0</td>
+                        <td>
+                            <button type="button" class="btn btn-danger btn-sm eliminar-fila-nc">Eliminar</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-md-4 offset-md-8">
+                <table class="table table-borderless">
+                    <tr>
+                        <th class="text-end">Subtotal:</th>
+                        <td class="text-end" id="ncSubtotal">Gs. 0</td>
+                    </tr>
+                    <tr>
+                        <th class="text-end">IVA (10% inc.):</th>
+                        <td class="text-end" id="ncIVA">Gs. 0</td>
+                    </tr>
+                    <tr>
+                        <th class="text-end">Total:</th>
+                        <td class="text-end" id="ncTotal">Gs. 0</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <input type="hidden" name="detalleNcJson" id="detalleNcJson">
+        <input type="hidden" name="montoAcreditar" id="montoAcreditar">
+
+        <div class="mt-3 mb-5">
+            <button type="submit" class="btn btn-primary">Emitir Nota de Crédito</button>
+            <a href="{{ url_for('ventas.ver', id=venta.id) }}" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+<script>
+function recalcularTotalesNC() {
+    let subtotal = 0;
+    let detalles = [];
+    
+    document.querySelectorAll('#tablaDetalleNC tbody tr').forEach(function(row) {
+        const inputCant = row.querySelector('input.cantidad-nc');
+        if (!inputCant) return;
+
+        const cantidad = parseFloat(inputCant.value) || 0;
+        const precio = parseFloat(inputCant.getAttribute('data-precio')) || 0;
+        const filaSubtotal = cantidad * precio;
+
+        // Actualizar subtotal de la fila visualmente
+        row.querySelector('.fila-subtotal').textContent = 'Gs. ' + filaSubtotal.toLocaleString();
+
+        if (cantidad > 0) {
+            subtotal += filaSubtotal;
+            detalles.push({
+                id_detalle: row.querySelector('input[name="ids_detalle_nc"]').value,
+                cantidad: cantidad,
+                precio_unitario: precio
+            });
+        }
+    });
+
+    const iva = subtotal / 11; // Cálculo de IVA 10% incluido
+    
+    document.getElementById('ncSubtotal').textContent = 'Gs. ' + subtotal.toLocaleString();
+    document.getElementById('ncIVA').textContent = 'Gs. ' + Math.round(iva).toLocaleString();
+    document.getElementById('ncTotal').textContent = 'Gs. ' + subtotal.toLocaleString();
+    
+    document.getElementById('detalleNcJson').value = JSON.stringify(detalles);
+    document.getElementById('montoAcreditar').value = subtotal;
+}
+
+document.addEventListener('input', function(e) {
+    if (e.target.classList.contains('cantidad-nc')) {
+        recalcularTotalesNC();
+    }
+});
+
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('eliminar-fila-nc')) {
+        e.target.closest('tr').remove();
+        recalcularTotalesNC();
+    }
+});
+
+// Ejecutar al cargar para inicializar en 0
+recalcularTotalesNC();
+</script>
+{% endblock %}

@@ -35,20 +35,33 @@ def create_app(config_class=Config):
     # Importar modelos (necesario para migrations)
     from app.models import usuario, cliente, producto, servicio, venta, compra, configuracion
     
-    # Context processor para hacer config disponible en todos los templates
+    # Context processor para hacer empresa disponible en todos los templates
     @app.context_processor
-    def inject_config():
+    def inject_empresa():
         import sys
-        try:
-            from app.models.configuracion import ConfiguracionEmpresa
-            config = ConfiguracionEmpresa.get_config()
-            print(f"✅ CONFIG OBTENIDA: {config.nombre_empresa}", file=sys.stderr, flush=True)
-        except Exception as e:
-            print(f"❌ Error obteniendo config: {e}", file=sys.stderr, flush=True)
-            import traceback
-            traceback.print_exc(file=sys.stderr)
-            config = None
-        return dict(config=config)
+        import time
+        from sqlalchemy.exc import OperationalError
+        max_retries = 5
+        delay = 3  # segundos
+        empresa = None
+        for attempt in range(1, max_retries + 1):
+            try:
+                from app.models.configuracion import ConfiguracionEmpresa
+                empresa = ConfiguracionEmpresa.query.first()
+                print(f"✅ EMPRESA OBTENIDA: {empresa.nombre_empresa if empresa else None}", file=sys.stderr, flush=True)
+                break
+            except OperationalError as e:
+                print(f"⏳ Intento {attempt}/{max_retries}: Base de datos no disponible aún: {e}", file=sys.stderr, flush=True)
+                if attempt < max_retries:
+                    time.sleep(delay)
+                else:
+                    print(f"❌ Error obteniendo empresa tras {max_retries} intentos: {e}", file=sys.stderr, flush=True)
+            except Exception as e:
+                print(f"❌ Error obteniendo empresa: {e}", file=sys.stderr, flush=True)
+                import traceback
+                traceback.print_exc(file=sys.stderr)
+                break
+        return dict(empresa=empresa)
     
     # Registrar blueprints
     from app.routes import auth, dashboard, clientes, productos, servicios, ventas, compras, reportes, configuracion as config_bp, caja

@@ -12,6 +12,8 @@ from app.models.venta import (
     Caja, AperturaCaja, Venta, VentaDetalle, FormaPago, Pago,
     NotaCredito, NotaDebito
 )
+from app.models.nota_credito_detalle import NotaCreditoDetalle
+from app.models.nota_debito_detalle import NotaDebitoDetalle
 from app.models.compra import (
     Proveedor, PedidoCompra, PedidoCompraDetalle, PresupuestoProveedor,
     PresupuestoProveedorDetalle, OrdenCompra, OrdenCompraDetalle,
@@ -26,7 +28,7 @@ __all__ = [
     'TipoServicio', 'SolicitudServicio', 'Presupuesto', 'PresupuestoDetalle',
     'OrdenServicio', 'OrdenServicioDetalle', 'Reclamo', 'ReclamoSeguimiento', 'ReclamoHistorial',
     'Caja', 'AperturaCaja', 'Venta', 'VentaDetalle', 'FormaPago', 'Pago',
-    'NotaCredito', 'NotaDebito',
+    'NotaCredito', 'NotaDebito', 'NotaCreditoDetalle', 'NotaDebitoDetalle',
     'Proveedor', 'PedidoCompra', 'PedidoCompraDetalle', 'PresupuestoProveedor',
     'PresupuestoProveedorDetalle', 'OrdenCompra', 'OrdenCompraDetalle',
     'Compra', 'CompraDetalle', 'CuentaPorPagar', 'PagoProveedor', 'PagoCompra', 'MovimientoCaja',

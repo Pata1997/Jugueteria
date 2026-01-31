@@ -15,10 +15,13 @@
                     <a href="{{ url_for('compras.pendientes_pago') }}" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left"></i> Volver
                     </a>
-                    {% if compra.estado == 'registrada' %}
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalPagar">
-                        <i class="fas fa-money-bill-wave"></i> Pagar
-                    </button>
+                    {# Mostrar botón Pagar solo si NO es a crédito (sin cuenta por pagar pendiente/parcial) #}
+                    {% if not cuenta or cuenta.estado == 'pagada' %}
+                        {% if compra.estado == 'registrada' %}
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalPagar">
+                            <i class="fas fa-money-bill-wave"></i> Pagar
+                        </button>
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>
@@ -177,39 +180,61 @@
         </div>
     </div>
 
-    <!-- HISTORIAL DE PAGOS -->
-    {% if compra.pagos %}
-    <div class="card">
+    <!-- HISTORIAL DE PAGOS DE PROVEEDOR (CUENTA POR PAGAR) -->
+    {% if cuenta %}
+    <div class="card mb-4">
         <div class="card-header bg-warning">
-            <h5 class="mb-0"><i class="fas fa-history"></i> Historial de Pagos</h5>
+            <h5 class="mb-0"><i class="fas fa-history"></i> Historial de Pagos a Proveedor</h5>
         </div>
         <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="alert alert-success mb-2 py-2">
+                        <strong>Total abonado:</strong><br>
+                        <span class="fs-5">Gs. {{ "{:,.0f}".format(total_abonado) }}</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="alert alert-danger mb-2 py-2">
+                        <strong>Saldo pendiente:</strong><br>
+                        <span class="fs-5">Gs. {{ "{:,.0f}".format(saldo_pendiente) }}</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="alert alert-info mb-2 py-2">
+                        <strong>Estado de la cuenta:</strong><br>
+                        {% if cuenta.estado == 'pagada' %}
+                            <span class="badge bg-success">Pagada</span>
+                        {% elif cuenta.estado == 'parcial' %}
+                            <span class="badge bg-info">Pago Parcial</span>
+                        {% else %}
+                            <span class="badge bg-warning">Pendiente</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
             <div class="table-responsive">
                 <table class="table table-sm">
                     <thead class="table-light">
                         <tr>
                             <th>Fecha</th>
                             <th>Monto</th>
-                            <th>Origen</th>
+                            <th>Forma de Pago</th>
                             <th>Referencia</th>
                             <th>Registrado por</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for pago in compra.pagos %}
+                        {% for pago in pagos_proveedor %}
                         <tr>
                             <td>{{ pago.fecha_pago.strftime('%d/%m/%Y %H:%M') }}</td>
                             <td>Gs. {{ "{:,.0f}".format(pago.monto) }}</td>
-                            <td>
-                                {% if pago.origen_pago == 'caja_chica' %}
-                                    <span class="badge bg-primary">Caja Chica</span>
-                                {% elif pago.origen_pago == 'otra_fuente' %}
-                                    <span class="badge bg-secondary">Otra Fuente</span>
-                                {% endif %}
-                            </td>
+                            <td>{{ pago.forma_pago|capitalize }}</td>
                             <td>{{ pago.referencia or '-' }}</td>
-                            <td>{{ pago.usuario_paga.nombre if pago.usuario_paga else 'N/A' }}</td>
+                            <td>{{ pago.usuario_registra.nombre if pago.usuario_registra else 'N/A' }}</td>
                         </tr>
+                        {% else %}
+                        <tr><td colspan="5" class="text-center text-muted">Sin pagos registrados</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>

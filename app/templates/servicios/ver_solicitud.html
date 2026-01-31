@@ -155,61 +155,7 @@
             </div>
         </div>
 
-        <!-- Presupuestos -->
-        <div class="card mb-3">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="fas fa-file-invoice-dollar"></i> Presupuestos</span>
-                {% if solicitud.estado == 'pendiente' %}
-                <a href="{{ url_for('servicios.crear_presupuesto', solicitud_id=solicitud.id) }}" class="btn btn-primary btn-sm">
-                    <i class="fas fa-plus"></i> Nuevo Presupuesto
-                </a>
-                {% endif %}
-            </div>
-            <div class="card-body">
-                {% if solicitud.presupuestos.all() %}
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Número</th>
-                                    <th>Fecha</th>
-                                    <th>Monto Total</th>
-                                    <th>Estado</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for presupuesto in solicitud.presupuestos.all() %}
-                                <tr>
-                                    <td><strong>{{ presupuesto.numero_presupuesto }}</strong></td>
-                                    <td>{{ presupuesto.fecha_presupuesto.strftime('%d/%m/%Y') }}</td>
-                                    <td>Gs. {{ "{:,.0f}".format(presupuesto.monto_total|float) }}</td>
-                                    <td>
-                                        {% if presupuesto.estado == 'pendiente' %}
-                                            <span class="badge bg-warning text-dark">Pendiente</span>
-                                        {% elif presupuesto.estado == 'aprobado' %}
-                                            <span class="badge bg-success">Aprobado</span>
-                                        {% elif presupuesto.estado == 'rechazado' %}
-                                            <span class="badge bg-danger">Rechazado</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <a href="{{ url_for('servicios.ver_presupuesto', id=presupuesto.id) }}" class="btn btn-sm btn-info">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <p class="text-muted text-center mb-0">
-                        <i class="fas fa-inbox"></i> No hay presupuestos registrados
-                    </p>
-                {% endif %}
-            </div>
-        </div>
+        
 
         <!-- Orden de Servicio -->
         {% if solicitud.orden_servicio %}

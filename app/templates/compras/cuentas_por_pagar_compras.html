@@ -4,6 +4,31 @@
 
 {% block content %}
 <div class="container-fluid p-4">
+    <!-- BUSCADOR POR PROVEEDOR -->
+    <form class="row mb-3" method="get">
+        <div class="col-md-6 col-lg-4">
+            <input type="text" class="form-control" name="proveedor" placeholder="Buscar por proveedor o RUC" value="{{ proveedor_query }}">
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Buscar</button>
+            <a href="{{ url_for('compras.cuentas_por_pagar_compras') }}" class="btn btn-outline-secondary">Limpiar</a>
+        </div>
+    </form>
+
+    {% if cuentas_por_vencer and cuentas_por_vencer|length > 0 %}
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle"></i>
+        <strong>¡Atención!</strong> Hay cuentas por pagar que vencen en los próximos 5 días:
+        <ul class="mb-0">
+            {% for c in cuentas_por_vencer %}
+            <li>
+                <strong>{{ c.proveedor.razon_social }}</strong> - Compra N° {{ c.compra.numero_compra if c.compra else '' }}:
+                vence el {{ c.fecha_vencimiento.strftime('%d/%m/%Y') }} (Monto: Gs. {{ "{:,.0f}".format(c.monto_adeudado or 0) }})
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
     <!-- ENCABEZADO -->
     <div class="row mb-4">
         <div class="col-12">
@@ -64,10 +89,10 @@
                     <thead class="table-light">
                         <tr>
                             <th>Fecha</th>
-                            <th>Compra</th>
+                            <th>N° Compra</th>
                             <th>Proveedor</th>
-                            <th>Total Compra</th>
-                            <th>Adeudado</th>
+                            <th>Total de la Compra</th>
+                            <th>Monto Adeudado</th>
                             <th>Vencimiento</th>
                             <th>Estado</th>
                             <th>Acciones</th>
@@ -75,20 +100,22 @@
                     </thead>
                     <tbody>
                         {% for cuenta in cuentas.items %}
-                        <tr class="{% if cuenta.fecha_vencimiento and cuenta.fecha_vencimiento < today() %}table-danger{% endif %}">
+                        <tr class="{% if cuenta.fecha_vencimiento and cuenta.fecha_vencimiento < hoy %}table-danger{% endif %}">
                             <td>{{ cuenta.fecha_creacion.strftime('%d/%m/%Y') if cuenta.fecha_creacion else '-' }}</td>
                             <td>
                                 <strong>{{ cuenta.compra.numero_compra if cuenta.compra else 'N/A' }}</strong>
                             </td>
                             <td>{{ cuenta.proveedor.razon_social if cuenta.proveedor else 'N/A' }}</td>
-                            <td>Gs. {{ "{:,.0f}".format(cuenta.monto_total or 0) }}</td>
+                            <td>Gs. {{ "{:,.0f}".format(cuenta.compra.total if cuenta.compra and cuenta.compra.total else 0) }}</td>
                             <td>
-                                <strong class="text-danger">Gs. {{ "{:,.0f}".format(cuenta.monto_adeudado or 0) }}</strong>
+                                {% set total_abonado = (cuenta.pagos_proveedor | map(attribute='monto') | sum) if cuenta.pagos_proveedor else 0 %}
+                                {% set saldo_pendiente = (cuenta.monto_adeudado or 0) - (total_abonado or 0) %}
+                                <strong class="text-danger">Gs. {{ "{:,.0f}".format(saldo_pendiente) }}</strong>
                             </td>
                             <td>
                                 {% if cuenta.fecha_vencimiento %}
                                     {{ cuenta.fecha_vencimiento.strftime('%d/%m/%Y') }}
-                                    {% if cuenta.fecha_vencimiento < today() %}
+                                    {% if cuenta.fecha_vencimiento < hoy %}
                                         <span class="badge bg-danger ms-1">VENCIDA</span>
                                     {% endif %}
                                 {% else %}
@@ -109,12 +136,12 @@
                             <td>
                                 {% if cuenta.compra %}
                                 <a href="{{ url_for('compras.ver', id=cuenta.compra.id) }}" class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-eye"></i> Ver Compra
+                                    <i class="fas fa-eye"></i> Ver Detalle
                                 </a>
                                 <button type="button" class="btn btn-sm btn-success" 
                                         data-bs-toggle="modal" data-bs-target="#modalPagarCuenta"
-                                        onclick="prepararPagoCuenta({{ cuenta.id }}, {{ cuenta.monto_adeudado }}, '{{ cuenta.compra.numero_compra }}')">
-                                    <i class="fas fa-money-bill-wave"></i> Pagar
+                                        onclick="prepararPagoCuenta({{ cuenta.id }}, {{ (cuenta.monto_adeudado - (cuenta.pagos_proveedor | map(attribute='monto') | sum if cuenta.pagos_proveedor else 0)) | float }}, '{{ cuenta.compra.numero_compra }}')">
+                                    <i class="fas fa-money-bill-wave"></i> Registrar Pago
                                 </button>
                                 {% endif %}
                             </td>
@@ -173,7 +200,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
-                <h5 class="modal-title"><i class="fas fa-credit-card"></i> Pagar Cuenta por Pagar</h5>
+                <h5 class="modal-title"><i class="fas fa-credit-card"></i> Registrar Pago de Cuenta por Pagar</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
 
@@ -181,30 +208,39 @@
                 <div class="modal-body">
                     <div class="alert alert-light border mb-3">
                         <small>
-                            <strong>Compra:</strong> <span id="cuentaCompra"></span><br>
-                            <strong>Adeudado:</strong> Gs. <span id="cuentaMonto"></span>
+                            <strong>Compra N°:</strong> <span id="cuentaCompra"></span><br>
+                            <strong>Monto Adeudado:</strong> Gs. <span id="cuentaMonto"></span><br>
+                            <span class="text-muted">Ingrese el monto a abonar y seleccione la forma de pago.</span>
                         </small>
                     </div>
 
                     <!-- MONTO A PAGAR -->
                     <div class="mb-3">
-                        <label for="montoCuenta" class="form-label required">Monto a Pagar</label>
+                        <label for="montoCuenta" class="form-label required">Monto a abonar</label>
                         <div class="input-group">
                             <span class="input-group-text">Gs.</span>
                             <input type="number" class="form-control" id="montoCuenta" name="monto" 
-                                   min="0" step="0.01" required>
+                                   min="0" step="0.01" required placeholder="Ingrese el monto a abonar">
                         </div>
                     </div>
 
-                    <!-- FORMA DE PAGO -->
-                    <div class="mb-3">
-                        <label for="forma_pago" class="form-label required">Forma de Pago</label>
-                        <select class="form-select" id="forma_pago" name="forma_pago" required>
-                            <option value="">-- Selecciona --</option>
-                            <option value="efectivo">Efectivo</option>
-                            <option value="transferencia">Transferencia</option>
-                            <option value="cheque">Cheque</option>
-                        </select>
+                    <!-- ORIGEN DEL PAGO -->
+                    <div class="mb-4">
+                        <label class="form-label required">Origen del Pago</label>
+                        <div class="form-check mb-3 border-start border-primary ps-3">
+                            <input class="form-check-input" type="radio" name="origen_pago" id="origen_caja_cxp" value="caja_chica" checked>
+                            <label class="form-check-label" for="origen_caja_cxp">
+                                <strong><i class="fas fa-cash-register"></i> Caja Chica (Descuenta de Apertura)</strong><br>
+                                <span class="text-muted small">El monto se descuenta de la caja abierta y se registra como egreso.</span>
+                            </label>
+                        </div>
+                        <div class="form-check border-start border-warning ps-3">
+                            <input class="form-check-input" type="radio" name="origen_pago" id="origen_otra_cxp" value="otra_fuente">
+                            <label class="form-check-label" for="origen_otra_cxp">
+                                <strong><i class="fas fa-external-link-alt"></i> Otra Fuente (No afecta Caja)</strong><br>
+                                <span class="text-muted small">Transferencia, cheque, o fuente externa. No toca la caja chica.</span>
+                            </label>
+                        </div>
                     </div>
 
                     <!-- REFERENCIA -->
@@ -249,10 +285,11 @@ function today() {
 
 function prepararPagoCuenta(cuentaId, montoAdeudado, numeroCompra) {
     document.getElementById('cuentaCompra').textContent = numeroCompra;
-    document.getElementById('cuentaMonto').textContent = parseFloat(montoAdeudado).toLocaleString('es-PY', {minimumFractionDigits: 2});
-    document.getElementById('montoCuenta').value = parseFloat(montoAdeudado).toFixed(2);
+    // Formatear con separador de miles y dos decimales
+    let montoFormateado = Number(montoAdeudado).toLocaleString('es-PY', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+    document.getElementById('cuentaMonto').textContent = montoFormateado;
+    document.getElementById('montoCuenta').value = Number(montoAdeudado).toFixed(0);
     document.getElementById('cuentaIdHidden').value = cuentaId;
-    
     // Update form action with cuenta_id
     document.getElementById('formPagarCuenta').action = `{{ url_for('compras.registrar_pago_proveedor', cuenta_id=0) }}`.replace('0', cuentaId);
 }
