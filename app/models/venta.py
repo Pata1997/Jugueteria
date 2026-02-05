@@ -227,25 +227,12 @@ class NotaCredito(db.Model):
     
     venta = db.relationship('Venta', backref='notas_credito')
     usuario = db.relationship('Usuario', backref='notas_credito')
+    detalles = db.relationship('NotaCreditoDetalle', backref='nota_credito', lazy='select', cascade='all, delete-orphan')
+    
     
     def __repr__(self):
         return f'<NotaCredito {self.numero_nota}>'
 
-class NotaDebito(db.Model):
-    __tablename__ = 'notas_debito'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    numero_nota = db.Column(db.String(50), unique=True, nullable=False, index=True)
-    fecha_emision = db.Column(db.DateTime, default=datetime.utcnow)
-    venta_id = db.Column(db.Integer, db.ForeignKey('ventas.id'), nullable=False)
-    motivo = db.Column(db.String(200), nullable=False)
-    monto = db.Column(db.Numeric(12, 2), nullable=False)
-    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'))
-    estado = db.Column(db.String(20), default='activa')  # activa, anulada
-    observaciones = db.Column(db.Text)
-    
-    venta = db.relationship('Venta', backref='notas_debito')
-    usuario = db.relationship('Usuario', backref='notas_debito')
-    
-    def __repr__(self):
-        return f'<NotaDebito {self.numero_nota}>'
+# NotaDebito se movió a app.models.nota_debito para mejor organización
+# Ver nota_debito.py para la definición completa del modelo
+

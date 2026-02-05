@@ -1,57 +1,491 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+
+{% block title %}Cobrar Nota de Débito #{{ nota.numero_nota }}{% endblock %}
+{% block page_title %}Cobro de Nota de Débito{% endblock %}
+
 {% block content %}
-<div class="container mt-4">
-    <h2>Cobrar Nota de Débito</h2>
-    <div class="card mb-3">
-        <div class="card-body">
-            <h5>Nota de Débito: <span class="text-primary">{{ nota.numero_nota }}</span></h5>
-            <p>Factura Referenciada: <strong>{{ nota.venta.numero_factura }}</strong></p>
-            <p>Cliente: <strong>{{ nota.venta.cliente.nombre }}</strong></p>
-            <p>Total ND: <strong>Gs. {{ '{:,.0f}'.format(nota.monto) }}</strong></p>
-            <p>Saldo Pendiente: <strong>Gs. {{ '{:,.0f}'.format(nota.monto - pagado) }}</strong></p>
+<form method="POST" id="formCobrar">
+<div class="row">
+    <!-- Columna Principal -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <i class="fas fa-file-invoice-dollar"></i> Cobrar Nota de Débito: {{ nota.numero_nota }}
+            </div>
+            <div class="card-body">
+                    <!-- Cliente -->
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Cliente *</strong></label>
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <p class="mb-1"><strong>{{ nota.venta.cliente.nombre if nota.venta.cliente else 'Cliente Final' }}</strong></p>
+                                {% if nota.venta.cliente %}
+                                <small class="text-muted">
+                                    {% if nota.venta.cliente.numero_documento and nota.venta.cliente.tipo_documento %}
+                                        {{ nota.venta.cliente.tipo_documento }}: {{ nota.venta.cliente.numero_documento }}
+                                    {% else %}
+                                        Doc: N/A
+                                    {% endif %}
+                                    | Tel: {{ nota.venta.cliente.telefono or 'N/A' }}
+                                </small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detalle -->
+                    <h6 class="mb-3">Detalle de la Nota de Débito</h6>
+                    <div class="alert alert-info">
+                        <strong><i class="fas fa-receipt"></i> Factura Referenciada:</strong> {{ nota.venta.numero_factura }}
+                    </div>
+                    <div class="mb-3">
+                        <strong>Tipo:</strong> 
+                        {% if nota.tipo == 'cargo' %}
+                            <span class="badge bg-warning">Cargo</span>
+                        {% else %}
+                            <span class="badge bg-info">Devolución</span>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <strong>Motivo:</strong> {{ nota.motivo }}
+                    </div>
+                    {% if nota.observaciones %}
+                    <div class="mb-3">
+                        <strong>Observaciones:</strong> {{ nota.observaciones }}
+                    </div>
+                    {% endif %}
+
+                    <!-- Tabla de Detalles -->
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Descripción</th>
+                                    <th width="80">Cant.</th>
+                                    <th width="120">P. Unit.</th>
+                                    <th width="120">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for detalle in nota.detalles %}
+                                <tr>
+                                    <td><strong>{{ detalle.descripcion }}</strong></td>
+                                    <td class="text-center">{{ detalle.cantidad }}</td>
+                                    <td class="text-end">Gs. {{ "{:,.0f}".format(detalle.precio_unitario) }}</td>
+                                    <td class="text-end">Gs. {{ "{:,.0f}".format(detalle.subtotal) }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-secondary">
+                                <tr class="fw-bold">
+                                    <td colspan="3" class="text-end"><strong>TOTAL:</strong></td>
+                                    <td class="text-end">Gs. {{ "{:,.0f}".format(nota.monto) }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <!-- Historial de Pagos -->
+                    {% if nota.pagos %}
+                    <hr>
+                    <h6 class="mb-3"><i class="fas fa-history"></i> Historial de Pagos</h6>
+                    <table class="table table-sm table-striped">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Forma de Pago</th>
+                                <th>Monto</th>
+                                <th>Referencia</th>
+                                <th>Banco</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for pago in nota.pagos %}
+                            <tr>
+                                <td>{{ pago.fecha_pago.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>{{ pago.forma_pago.nombre }}</td>
+                                <td>Gs. {{ '{:,.0f}'.format(pago.monto) }}</td>
+                                <td>{{ pago.referencia or '-' }}</td>
+                                <td>{{ pago.banco or '-' }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                    {% endif %}
+            </div>
         </div>
     </div>
-    <form method="post">
-        <div class="mb-3">
-            <label for="forma_pago" class="form-label">Forma de Pago</label>
-            <select class="form-control" id="forma_pago" name="forma_pago_id" required>
-                <option value="">Seleccione...</option>
-                {% for fp in formas_pago %}
-                <option value="{{ fp.id }}">{{ fp.nombre }}</option>
-                {% endfor %}
-            </select>
+
+    <!-- Columna Lateral -->
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header">
+                <i class="fas fa-info-circle"></i> Resumen de ND
+            </div>
+            <div class="card-body">
+                <p><strong>Nota de Débito:</strong> {{ nota.numero_nota }}</p>
+                <p><strong>Cliente:</strong> {{ nota.venta.cliente.nombre if nota.venta.cliente else 'Final' }}
+                {% if nota.venta.cliente and nota.venta.cliente.numero_documento %}
+                <br><small class="text-muted">{{ nota.venta.cliente.tipo_documento }}: {{ nota.venta.cliente.numero_documento }}</small>
+                {% endif %}
+                </p>
+                <p><strong>Estado Pago:</strong> 
+                    {% if nota.estado_pago == 'pendiente' %}
+                        <span class="badge bg-danger">Pendiente</span>
+                    {% elif nota.estado_pago == 'pagado' %}
+                        <span class="badge bg-success">Pagada</span>
+                    {% else %}
+                        <span class="badge bg-warning">Parcial</span>
+                    {% endif %}
+                </p>
+                <hr>
+                <div class="d-flex justify-content-between">
+                    <span>Total ND:</span>
+                    <strong>Gs. {{ "{:,.0f}".format(nota.monto) }}</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Ya Pagado:</span>
+                    <strong>Gs. {{ "{:,.0f}".format(nota.monto_pagado) }}</strong>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between fw-bold">
+                    <span>SALDO PENDIENTE:</span>
+                    <strong class="text-danger">Gs. {{ "{:,.0f}".format(nota.monto_pendiente) }}</strong>
+                </div>
+            </div>
         </div>
-        <div class="mb-3">
-            <label for="monto" class="form-label">Monto a Cobrar</label>
-            <input type="number" class="form-control" id="monto" name="monto" min="1" max="{{ nota.monto - pagado }}" value="{{ nota.monto - pagado }}" required>
+
+        <!-- Formas de Pago -->
+        {% if nota.estado_pago != 'pagado' %}
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-cash-register"></i> Registrar Pagos
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <button type="button" class="btn btn-sm btn-warning w-100" id="agregar_pago" data-bs-toggle="modal" data-bs-target="#modalPago">
+                        <i class="fas fa-plus"></i> Agregar forma de pago
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Forma</th>
+                                <th class="text-end">Monto (Gs.)</th>
+                                <th>Ref.</th>
+                                <th class="text-center" width="50">&nbsp;</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pagos_tbody">
+                            <tr class="text-muted" id="fila_vacia">
+                                <td colspan="4" class="text-center">Sin pagos agregados</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Resumen -->
+                <div class="alert d-none" id="resumen_pagos">
+                    <div class="row">
+                        <div class="col-6">
+                            <strong>Saldo Pendiente:</strong><br>
+                            Gs. <span id="saldo_pendiente">{{ "{:,.0f}".format(nota.monto_pendiente) }}</span>
+                        </div>
+                        <div class="col-6">
+                            <strong>Total Pagos:</strong><br>
+                            Gs. <span id="total_pagos">0</span>
+                        </div>
+                        <div class="col-6 mt-2">
+                            <strong>Faltante:</strong><br>
+                            <span class="text-danger fw-bold">Gs. <span id="total_faltante">{{ "{:,.0f}".format(nota.monto_pendiente) }}</span></span>
+                        </div>
+                        <div class="col-6 mt-2">
+                            <strong>Vuelto:</strong><br>
+                            <span class="text-success fw-bold">Gs. <span id="total_vuelto">0</span></span>
+                        </div>
+                    </div>
+                    <div id="alerta_vuelto" class="alert alert-warning mt-2" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span id="mensaje_vuelto"></span>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="mb-3">
-            <label for="referencia" class="form-label">Referencia</label>
-            <input type="text" class="form-control" id="referencia" name="referencia">
+        {% else %}
+        <div class="alert alert-success">
+            <h6><i class="fas fa-check-circle"></i> ND Completamente Pagada</h6>
+            <p class="mb-0 small">Pagada el {{ nota.pagos[-1].fecha_pago.strftime('%d/%m/%Y %H:%M') if nota.pagos else 'N/A' }}</p>
         </div>
-        <div class="mb-3">
-            <label for="observaciones" class="form-label">Observaciones</label>
-            <textarea class="form-control" id="observaciones" name="observaciones"></textarea>
-        </div>
-        <button type="submit" class="btn btn-primary">Registrar Cobro</button>
-        <a href="{{ url_for('ventas.listar_nc_nd') }}" class="btn btn-secondary">Cancelar</a>
-    </form>
-    <hr>
-    <h5>Pagos Realizados</h5>
-    <table class="table table-sm">
-        <thead>
-            <tr><th>Fecha</th><th>Forma de Pago</th><th>Monto</th><th>Referencia</th></tr>
-        </thead>
-        <tbody>
-        {% for pago in nota.pagos %}
-            <tr>
-                <td>{{ pago.fecha_pago.strftime('%d/%m/%Y %H:%M') }}</td>
-                <td>{{ pago.forma_pago.nombre }}</td>
-                <td>Gs. {{ '{:,.0f}'.format(pago.monto) }}</td>
-                <td>{{ pago.referencia }}</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+        {% endif %}
+    </div>
 </div>
+
+<!-- Botones de Acción -->
+{% if nota.estado_pago != 'pagado' %}
+<div class="d-grid gap-2 d-md-flex justify-content-md-end mt-3">
+    <a href="{{ url_for('ventas.listar_nc_nd') }}" class="btn btn-secondary">
+        <i class="fas fa-times"></i> Cancelar
+    </a>
+    <button type="submit" class="btn btn-success" id="btnCobrar" disabled>
+        <i class="fas fa-check"></i> Registrar Cobro
+    </button>
+</div>
+{% else %}
+<div class="d-grid gap-2 d-md-flex justify-content-md-end mt-3">
+    <a href="{{ url_for('ventas.listar_nc_nd') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Volver al Listado
+    </a>
+</div>
+{% endif %}
+
+<!-- Hidden field para pagos -->
+<input type="hidden" name="pagos_json" id="pagos_json" value="[]">
+</form>
+
+<!-- Modal Agregar Pago -->
+<div class="modal fade" id="modalPago" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-money-check-alt"></i> Agregar forma de pago</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formPagoModal">
+                    <div class="mb-3">
+                        <label class="form-label">Forma de Pago</label>
+                        <select class="form-select" id="modal_forma_pago" required>
+                            <option value="">--Seleccionar--</option>
+                            {% for fp in formas_pago %}
+                            <option value="{{ fp.id }}" data-nombre="{{ fp.nombre }}">{{ fp.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Monto (Gs.)</label>
+                        <input type="text" class="form-control" id="modal_monto" inputmode="decimal" placeholder="0" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Referencia</label>
+                        <input type="text" class="form-control" id="modal_referencia" placeholder="Número de comprobante">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Banco (si aplica)</label>
+                        <input type="text" class="form-control" id="modal_banco" placeholder="Nombre del banco">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="guardar_pago_modal">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    const saldoPendiente = parseFloat('{{ nota.monto_pendiente }}');
+    const formatter = new Intl.NumberFormat('es-PY');
+    let pagos = [];
+
+    function parseMontoInput(valor) {
+        if (!valor) return 0;
+        const normalizado = valor.toString().replace(/\./g, '').replace(',', '.');
+        return parseFloat(normalizado) || 0;
+    }
+
+    function formatearValor(valor) {
+        const parsed = parseMontoInput(valor);
+        if (!parsed) return '';
+        return formatter.format(Math.round(parsed));
+    }
+
+    function formatearCampoMonto() {
+        const $campo = $('#modal_monto');
+        const parsed = parseMontoInput($campo.val());
+        if (!parsed) {
+            $campo.val('');
+            return;
+        }
+        $campo.val(formatter.format(Math.round(parsed)));
+    }
+
+    function formatearMontoEnVivo(event) {
+        const input = event.target;
+        const caretToEnd = input.selectionEnd === input.value.length;
+        const formatted = formatearValor(input.value);
+        input.value = formatted;
+        if (caretToEnd) {
+            input.setSelectionRange(input.value.length, input.value.length);
+        }
+    }
+
+    function renderPagos() {
+        const $tbody = $('#pagos_tbody');
+        $tbody.empty();
+
+        if (pagos.length === 0) {
+            $tbody.append('<tr class="text-muted" id="fila_vacia"><td colspan="4" class="text-center">Sin pagos agregados</td></tr>');
+            return;
+        }
+
+        pagos.forEach((pago, idx) => {
+            const row = `
+                <tr>
+                    <td><small>${pago.forma_nombre}</small></td>
+                    <td class="text-end"><small>${formatter.format(Math.round(pago.monto))}</small></td>
+                    <td><small>${pago.referencia ? pago.referencia.substring(0, 10) : ''}</small></td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-outline-danger eliminar_pago" data-idx="${idx}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+            $tbody.append(row);
+        });
+    }
+
+    function actualizarTotal() {
+        let sumaPagos = pagos.reduce((sum, p) => sum + p.monto, 0);
+        let efectivoTotal = pagos
+            .filter(p => (p.forma_nombre || '').toLowerCase().includes('efectivo'))
+            .reduce((s, p) => s + p.monto, 0);
+
+        const $resumen = $('#resumen_pagos');
+        const $alertaVuelto = $('#alerta_vuelto');
+
+        if (sumaPagos <= 0) {
+            $resumen.addClass('d-none').removeClass('alert-success alert-warning alert-danger');
+            $('#btnCobrar').prop('disabled', true);
+            $('#total_pagos').text('0');
+            $('#total_faltante').text(formatter.format(Math.round(saldoPendiente)));
+            $('#total_vuelto').text('0');
+            $alertaVuelto.hide();
+            return;
+        }
+
+        $resumen.removeClass('d-none');
+        $('#total_pagos').text(formatter.format(Math.round(sumaPagos)));
+
+        const diferencia = sumaPagos - saldoPendiente;
+        const faltante = Math.max(0, -diferencia);
+        const vuelto = Math.max(0, diferencia);
+
+        $('#total_faltante').text(formatter.format(Math.round(faltante)));
+        $('#total_vuelto').text(formatter.format(Math.round(vuelto)));
+
+        if (sumaPagos >= saldoPendiente) {
+            $resumen.removeClass('alert-warning alert-danger').addClass('alert-success');
+            $('#btnCobrar').prop('disabled', false);
+
+            if (vuelto > 0) {
+                if (efectivoTotal < vuelto) {
+                    const faltaEfectivo = vuelto - efectivoTotal;
+                    $('#mensaje_vuelto').html(
+                        `<strong>Advertencia:</strong> El vuelto es ${formatter.format(Math.round(vuelto))} Gs. pero solo hay ${formatter.format(Math.round(efectivoTotal))} Gs. en efectivo. Faltan ${formatter.format(Math.round(faltaEfectivo))} Gs. para cubrir el vuelto.`
+                    );
+                    $alertaVuelto.removeClass('alert-info').addClass('alert-warning').show();
+                    $('#btnCobrar').prop('disabled', true);
+                } else {
+                    $('#mensaje_vuelto').html(
+                        `<i class="fas fa-info-circle"></i> Se devolverá ${formatter.format(Math.round(vuelto))} Gs. en efectivo al cliente.`
+                    );
+                    $alertaVuelto.removeClass('alert-warning').addClass('alert-info').show();
+                }
+            } else {
+                $alertaVuelto.hide();
+            }
+        } else {
+            $resumen.removeClass('alert-success alert-danger').addClass('alert-warning');
+            $('#btnCobrar').prop('disabled', true);
+            $alertaVuelto.hide();
+        }
+    }
+
+    // Modal: reset al abrir
+    $('#modalPago').on('shown.bs.modal', function() {
+        $('#formPagoModal')[0].reset();
+        $('#modal_forma_pago').focus();
+    });
+
+    // Formatear monto
+    $(document).on('blur change', '#modal_monto', formatearCampoMonto);
+    $(document).on('keyup', '#modal_monto', function(e) {
+        if (e.key === 'Enter') {
+            formatearCampoMonto();
+        }
+    });
+    $(document).on('input', '#modal_monto', formatearMontoEnVivo);
+
+    // Guardar pago desde modal
+    $('#guardar_pago_modal').on('click', function() {
+        const formaId = $('#modal_forma_pago').val();
+        const formaNombre = $('#modal_forma_pago option:selected').data('nombre');
+        const monto = parseMontoInput($('#modal_monto').val());
+        const referencia = $('#modal_referencia').val();
+        const banco = $('#modal_banco').val();
+
+        if (!formaId) {
+            alert('Seleccione una forma de pago');
+            return;
+        }
+        if (monto <= 0) {
+            alert('Ingrese un monto mayor a 0');
+            return;
+        }
+
+        $('#modal_monto').val(formatter.format(Math.round(monto)));
+
+        pagos.push({
+            forma_pago_id: formaId,
+            forma_nombre: formaNombre,
+            monto: monto,
+            referencia: referencia || '',
+            banco: banco || ''
+        });
+
+        renderPagos();
+        actualizarTotal();
+        $('#modalPago').modal('hide');
+    });
+
+    // Eliminar pago
+    $(document).on('click', '.eliminar_pago', function() {
+        const idx = $(this).data('idx');
+        pagos.splice(idx, 1);
+        renderPagos();
+        actualizarTotal();
+    });
+
+    // Inicializar
+    renderPagos();
+    actualizarTotal();
+
+    // Enviar formulario
+    $('#formCobrar').submit(function(e) {
+        e.preventDefault();
+
+        if (pagos.length === 0) {
+            alert('Agregue al menos un pago');
+            return false;
+        }
+
+        const sumaPagos = pagos.reduce((sum, p) => sum + p.monto, 0);
+        if (sumaPagos <= 0) {
+            alert('El monto total debe ser mayor a 0');
+            return false;
+        }
+
+        $('#pagos_json').val(JSON.stringify(pagos));
+        this.submit();
+    });
+});
+</script>
 {% endblock %}

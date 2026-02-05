@@ -461,6 +461,7 @@ class GeneradorTicket:
                 y -= 4 * mm
                 
                 c.setFont("Helvetica", 7)
+                total_pagado = Decimal('0')
                 for pago in self.venta.pagos:
                     if pago.estado == 'confirmado':
                         forma_nombre = pago.forma_pago.nombre if pago.forma_pago else 'N/A'
@@ -469,8 +470,21 @@ class GeneradorTicket:
                         c.drawString(x_margin + 2 * mm, y, forma_nombre)
                         c.drawRightString(ancho_ticket - x_margin, y, monto_str)
                         y -= 3.5 * mm
+                        total_pagado += Decimal(str(pago.monto))
                 
-                y -= 3 * mm
+                # Mostrar vuelto si hay
+                vuelto = total_pagado - Decimal(str(self.venta.total))
+                if vuelto > 0:
+                    y -= 2 * mm
+                    c.setLineWidth(0.5)
+                    c.line(x_margin, y, ancho_ticket - x_margin, y)
+                    y -= 3 * mm
+                    c.drawString(x_margin, y, "VUELTO:")
+                    vuelto_str = f"{int(vuelto):,} Gs.".replace(',', '.')
+                    c.drawRightString(ancho_ticket - x_margin, y, vuelto_str)
+                    y -= 4 * mm
+                else:
+                    y -= 3 * mm
             
             # ============== PIE DE PÁGINA ==============
             

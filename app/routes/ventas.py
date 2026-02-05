@@ -645,45 +645,109 @@ def crear_nota_debito(venta_id):
     if request.method == 'POST':
         try:
             import json
-            ultimo = NotaDebito.query.order_by(NotaDebito.id.desc()).first()
-            numero = f"ND-{(ultimo.id + 1 if ultimo else 1):07d}"
+            from app.models.nota_debito_detalle import NotaDebitoDetalle
+            from app.models.producto import Producto
+            
+            # VALIDACIONES
+            tipo_nd = 'cargo'  # Siempre es cargo
+            motivo_tipo = request.form.get('motivo_tipo', '').strip()
+            motivo_otro = request.form.get('motivo_otro', '').strip()
+            
+            # Determinar el motivo final
+            if motivo_tipo == 'otro':
+                motivo = motivo_otro
+            else:
+                motivo = motivo_tipo
+            
+            if not motivo:
+                flash('El motivo es obligatorio', 'warning')
+                raise ValueError('Motivo vacío')
+            
+            # Obtener detalles del JSON
             detalle_json = request.form.get('detalle_nd_json')
             detalle = json.loads(detalle_json) if detalle_json else []
+            
+            if not detalle:
+                flash('Debe agregar al menos un detalle a la nota', 'warning')
+                raise ValueError('Sin detalles')
+            
+            # Calcular monto total
             monto_total = sum(float(item['cantidad']) * float(item['precio_unitario']) for item in detalle)
+            
+            # VALIDAR QUE MONTO NO SUPERE VENTA ORIGINAL
+            if monto_total > float(venta.total):
+                flash(f'El monto ND (Gs. {monto_total:,.0f}) no puede superar la venta (Gs. {venta.total:,.0f})', 'danger')
+                raise ValueError('Monto excesivo')
+            
+            # VALIDAR DUPLICADOS: No crear dos ND iguales en el mismo día
+            hoy = datetime.utcnow().date()
+            duplicado = NotaDebito.query.filter(
+                NotaDebito.venta_id == venta.id,
+                NotaDebito.motivo == motivo,
+                db.func.date(NotaDebito.fecha_emision) == hoy
+            ).first()
+            if duplicado:
+                flash('Ya existe una ND con el mismo motivo hoy. Verifique duplicados.', 'warning')
+                raise ValueError('Duplicado detectado')
+            
+            # Generar número secuencial
+            ultimo = NotaDebito.query.order_by(NotaDebito.id.desc()).first()
+            numero = f"ND-{(ultimo.id + 1 if ultimo else 1):07d}"
+            
+            # CREAR NOTA DE DÉBITO
             nota = NotaDebito(
                 numero_nota=numero,
                 venta_id=venta.id,
-                motivo=request.form.get('motivo'),
-                monto=monto_total,
+                tipo=tipo_nd,  # 'cargo' o 'devolución_producto'
+                motivo=motivo,
+                monto=Decimal(str(monto_total)),
                 usuario_id=current_user.id,
-                observaciones=request.form.get('observaciones')
+                observaciones=request.form.get('observaciones', ''),
+                estado_emision='activa',
+                estado_pago='pendiente'
             )
             db.session.add(nota)
-            db.session.flush()  # Para obtener el id de la nota
-            # Guardar detalles
-            from app.models.nota_debito_detalle import NotaDebitoDetalle
+            db.session.flush()  # Para obtener el id
+            
+            # GUARDAR DETALLES
             for item in detalle:
+                cantidad = float(item['cantidad'])
+                precio_unitario = float(item['precio_unitario'])
+                subtotal = cantidad * precio_unitario
+                
                 detalle_nd = NotaDebitoDetalle(
                     nota_debito_id=nota.id,
-                    descripcion=item['descripcion'],
-                    cantidad=item['cantidad'],
-                    precio_unitario=item['precio_unitario'],
-                    subtotal=float(item['cantidad']) * float(item['precio_unitario'])
+                    descripcion=item.get('descripcion', ''),
+                    cantidad=Decimal(str(cantidad)),
+                    precio_unitario=Decimal(str(precio_unitario)),
+                    subtotal=Decimal(str(subtotal))
                 )
                 db.session.add(detalle_nd)
+            
             db.session.commit()
-            flash('Nota de débito creada correctamente', 'success')
+            registrar_bitacora('crear-nota-debito', f'Nota de Débito creada: {numero}')
+            flash(f'Nota de débito {numero} creada correctamente', 'success')
             return redirect(url_for('ventas.ver', id=venta.id))
+            
+        except ValueError as e:
+            db.session.rollback()
+            # Flash ya registrado en validación
+            pass
         except Exception as e:
             db.session.rollback()
             flash(f'Error: {str(e)}', 'danger')
+            import traceback
+            traceback.print_exc()
     
-    # Calcular el próximo número de nota de débito
+    # GET: Mostrar formulario
     ultimo = NotaDebito.query.order_by(NotaDebito.id.desc()).first()
     numero_nota = f"ND-{(ultimo.id + 1 if ultimo else 1):07d}"
-    # Fecha de emisión actual
     fecha_emision = datetime.now().strftime('%d/%m/%Y')
-    return render_template('ventas/crear_nota_debito.html', venta=venta, numero_nota=numero_nota, fecha_emision=fecha_emision)
+    
+    return render_template('ventas/crear_nota_debito.html', 
+                          venta=venta, 
+                          numero_nota=numero_nota, 
+                          fecha_emision=fecha_emision)
 
 ## ===== LISTAR NOTAS DE CRÉDITO Y DÉBITO =====
 @bp.route('/notas')
@@ -698,33 +762,16 @@ def listar_nc_nd():
 @bp.route('/notas-debito/pdf/<int:nota_id>')
 @login_required
 def descargar_nota_debito_pdf(nota_id):
-    from app.models import NotaDebito, NotaDebitoDetalle, Cliente, ConfiguracionEmpresa
-    from app.utils.ticket import GeneradorTicket
+    from app.models import NotaDebito
+    from app.utils.nota_debito_ticket import generar_nota_debito_ticket_pdf
     from flask import send_file
     from io import BytesIO
+    
     nota = NotaDebito.query.get_or_404(nota_id)
-    detalles = NotaDebitoDetalle.query.filter_by(nota_debito_id=nota.id).all()
-    config = ConfiguracionEmpresa.get_config()
-    cliente = nota.venta.cliente
-    # Envolver detalles para exponer descripción
-    class DetalleFake:
-        def __init__(self, det):
-            self.cantidad = det.cantidad
-            self.precio_unitario = det.precio_unitario
-            self.subtotal = det.subtotal
-            self.descripcion = det.descripcion
-    detalles_ticket = [DetalleFake(det) for det in detalles]
-    class VentaFake:
-        def __init__(self, nota, cliente, detalles):
-            self.numero_factura = nota.numero_nota
-            self.fecha_venta = nota.fecha_emision
-            self.tipo_venta = 'NOTA DE DÉBITO'
-            self.cliente = cliente
-            self.total = nota.monto
-            self.detalles = detalles
-    venta_fake = VentaFake(nota, cliente, detalles_ticket)
-    ticket = GeneradorTicket(config, venta_fake, detalles_ticket)
-    pdf_bytes = ticket.generar_ticket_pdf()
+    
+    # Generar PDF con el nuevo generador SET-compliant
+    pdf_bytes = generar_nota_debito_ticket_pdf(nota)
+    
     pdf_buffer = BytesIO(pdf_bytes) if isinstance(pdf_bytes, bytes) else pdf_bytes
     pdf_buffer.seek(0)
     return send_file(
@@ -738,28 +785,95 @@ def descargar_nota_debito_pdf(nota_id):
 @bp.route('/notas-debito/cobrar/<int:nota_id>', methods=['GET', 'POST'])
 @login_required
 def cobrar_nota_debito(nota_id):
-    from app.models import NotaDebito, PagoNotaDebito, FormaPago, db
+    from app.models import NotaDebito, PagoNotaDebito, FormaPago
+    from decimal import Decimal
+    import json
+    
     nota = NotaDebito.query.get_or_404(nota_id)
     formas_pago = FormaPago.query.all()
+
+    # Verificar apertura de caja
+    apertura = AperturaCaja.query.filter_by(
+        cajero_id=current_user.id,
+        estado='abierto'
+    ).first()
+    if not apertura:
+        flash('Debes abrir una caja antes de cobrar una Nota de Débito', 'danger')
+        return redirect(url_for('caja.estado'))
+    
     if request.method == 'POST':
         try:
-            pago = PagoNotaDebito(
-                nota_debito_id=nota.id,
-                fecha_pago=datetime.utcnow(),
-                forma_pago_id=request.form.get('forma_pago_id'),
-                monto=request.form.get('monto'),
-                referencia=request.form.get('referencia'),
-                banco=request.form.get('banco'),
-                observaciones=request.form.get('observaciones'),
-                estado='confirmado'
+            # RECIBIR MÚLTIPLES PAGOS DESDE JSON
+            pagos_json = request.form.get('pagos_json', '[]')
+            pagos = json.loads(pagos_json)
+            
+            if not pagos:
+                flash('Agregue al menos una forma de pago', 'warning')
+                raise ValueError('Sin pagos')
+            
+            # CALCULAR TOTAL DE PAGOS
+            total_pagos = sum(Decimal(str(p['monto'])) for p in pagos)
+            
+            if total_pagos <= 0:
+                flash('El total de pagos debe ser mayor a 0', 'warning')
+                raise ValueError('Total inválido')
+
+            if total_pagos < Decimal(str(nota.monto_pendiente)):
+                flash('El total de pagos es menor al saldo pendiente', 'warning')
+                raise ValueError('Saldo incompleto')
+
+            # Validar vuelto: solo se puede devolver hasta el efectivo entregado
+            forma_ids = [int(p['forma_pago_id']) for p in pagos if p.get('forma_pago_id') is not None]
+            formas = {fp.id: fp.nombre.lower() for fp in FormaPago.query.filter(FormaPago.id.in_(forma_ids)).all()}
+            total_efectivo = sum(
+                Decimal(str(p['monto']))
+                for p in pagos
+                if 'efectivo' in (formas.get(int(p['forma_pago_id']), '') or '')
             )
-            db.session.add(pago)
+            excedente = total_pagos - Decimal(str(nota.monto_pendiente))
+            if excedente > 0 and total_efectivo < excedente:
+                flash('El vuelto excede el efectivo entregado. Ajuste los montos.', 'warning')
+                raise ValueError('Vuelto sin efectivo')
+            
+            # REGISTRAR CADA PAGO
+            for pago_data in pagos:
+                pago = PagoNotaDebito(
+                    nota_debito_id=nota.id,
+                    apertura_caja_id=apertura.id,
+                    fecha_pago=datetime.utcnow(),
+                    forma_pago_id=pago_data['forma_pago_id'],
+                    monto=Decimal(str(pago_data['monto'])),
+                    referencia=pago_data.get('referencia', ''),
+                    banco=pago_data.get('banco', ''),
+                    estado='confirmado'
+                )
+                db.session.add(pago)
+            
+            # ACTUALIZAR ESTADO DE PAGO AUTOMÁTICAMENTE
+            nota.actualizar_estado_pago()
+            
             db.session.commit()
-            flash('Pago de Nota de Débito registrado correctamente', 'success')
+            registrar_bitacora('pago-nota-debito', f'Cobro registrado para ND {nota.numero_nota}: Gs. {total_pagos:,.0f}')
+            
+            if nota.estado_pago == 'pagado':
+                if excedente > 0:
+                    flash(f'Nota de Débito {nota.numero_nota} pagada. Vuelto: Gs. {excedente:,.0f}', 'success')
+                else:
+                    flash(f'Nota de Débito {nota.numero_nota} completamente pagada', 'success')
+            else:
+                flash(f'Pago parcial registrado. Saldo pendiente: Gs. {nota.monto_pendiente:,.0f}', 'success')
+            
             return redirect(url_for('ventas.listar_nc_nd'))
+            
+        except ValueError as e:
+            db.session.rollback()
+            pass
         except Exception as e:
             db.session.rollback()
             flash(f'Error: {str(e)}', 'danger')
+            import traceback
+            traceback.print_exc()
+    
     return render_template('ventas/cobrar_nota_debito.html', nota=nota, formas_pago=formas_pago)
 
 # ===== CUENTAS POR COBRAR =====

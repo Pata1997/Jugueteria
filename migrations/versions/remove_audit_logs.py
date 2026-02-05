@@ -1,11 +1,17 @@
 """
 Migration: Elimina la tabla audit_logs
+Revision ID: remove_audit_logs
 """
 from alembic import op
 import sqlalchemy as sa
 
+revision = 'remove_audit_logs'
+down_revision = '96e44f5fab41'
+branch_labels = None
+depends_on = None
+
 def upgrade():
-    op.drop_table('audit_logs')
+    op.execute('DROP TABLE IF EXISTS audit_logs')
 
 def downgrade():
     op.create_table(

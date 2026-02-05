@@ -51,9 +51,12 @@
                         <th>Fecha</th>
                         <th>Cliente</th>
                         <th>Factura</th>
+                        <th>Tipo</th>
                         <th>Motivo</th>
                         <th>Monto</th>
+                        <th>Estado Pago</th>
                         <th>Usuario</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -63,11 +66,32 @@
                         <td>{{ nd.fecha_emision.strftime('%d/%m/%Y') }}</td>
                         <td>{{ nd.venta.cliente.nombre }}</td>
                         <td>{{ nd.venta.numero_factura }}</td>
+                        <td>
+                            {% if nd.tipo == 'cargo' %}
+                                <span class="badge bg-warning">Cargo</span>
+                            {% else %}
+                                <span class="badge bg-info">Devolución</span>
+                            {% endif %}
+                        </td>
                         <td>{{ nd.motivo }}</td>
                         <td>Gs. {{ '{:,.0f}'.format(nd.monto) }}</td>
+                        <td>
+                            {% if nd.estado_pago == 'pagado' %}
+                                <span class="badge bg-success">Pagada</span>
+                            {% elif nd.estado_pago == 'parcialmente_pagado' %}
+                                <span class="badge bg-warning">Parcial (Gs. {{ '{:,.0f}'.format(nd.monto_pendiente) }})</span>
+                            {% else %}
+                                <span class="badge bg-danger">Pendiente</span>
+                            {% endif %}
+                        </td>
                         <td>{{ nd.usuario.username }}</td>
                         <td>
-                            <a href="{{ url_for('ventas.descargar_nota_debito_pdf', nota_id=nd.id) }}" class="btn btn-sm btn-primary">PDF</a>
+                            {% if nd.estado_pago == 'pagado' %}
+                                <a href="{{ url_for('ventas.descargar_nota_debito_pdf', nota_id=nd.id) }}" class="btn btn-sm btn-primary">PDF</a>
+                            {% endif %}
+                            {% if nd.estado_pago != 'pagado' %}
+                                <a href="{{ url_for('ventas.cobrar_nota_debito', nota_id=nd.id) }}" class="btn btn-sm btn-success">Cobrar</a>
+                            {% endif %}
                         </td>
                     </tr>
                 {% endfor %}

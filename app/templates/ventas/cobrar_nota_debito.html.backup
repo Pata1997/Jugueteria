@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Cobrar Nota de Débito</h2>
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5>Nota de Débito: <span class="text-primary">{{ nota.numero_nota }}</span></h5>
+            <p>Factura Referenciada: <strong>{{ nota.venta.numero_factura }}</strong></p>
+            <p>Cliente: <strong>{{ nota.venta.cliente.nombre }}</strong></p>
+            <p>Tipo: 
+                {% if nota.tipo == 'cargo' %}
+                    <span class="badge bg-warning">Cargo</span>
+                {% else %}
+                    <span class="badge bg-info">Devolución</span>
+                {% endif %}
+            </p>
+            <p>Motivo: <strong>{{ nota.motivo }}</strong></p>
+            <hr>
+            <div class="row">
+                <div class="col-md-4">
+                    <p>Total ND: <strong class="h6">Gs. {{ '{:,.0f}'.format(nota.monto) }}</strong></p>
+                </div>
+                <div class="col-md-4">
+                    <p>Pagado: <strong class="h6">Gs. {{ '{:,.0f}'.format(nota.monto_pagado) }}</strong></p>
+                </div>
+                <div class="col-md-4">
+                    <p>Saldo Pendiente: 
+                        <strong class="h6">
+                            {% if nota.estado_pago == 'pagado' %}
+                                <span class="badge bg-success">PAGADA</span>
+                            {% else %}
+                                Gs. {{ '{:,.0f}'.format(nota.monto_pendiente) }}
+                            {% endif %}
+                        </strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if nota.estado_pago != 'pagado' %}
+    <form method="post">
+        <div class="mb-3">
+            <label for="forma_pago" class="form-label">Forma de Pago</label>
+            <select class="form-control" id="forma_pago" name="forma_pago_id" required>
+                <option value="">Seleccione...</option>
+                {% for fp in formas_pago %}
+                <option value="{{ fp.id }}">{{ fp.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label for="monto" class="form-label">Monto a Cobrar</label>
+            <input type="number" class="form-control" id="monto" name="monto" min="1" step="0.01" max="{{ nota.monto_pendiente }}" value="{{ nota.monto_pendiente }}" required>
+        </div>
+        <div class="mb-3">
+            <label for="referencia" class="form-label">Referencia (Ej: Número de comprobante)</label>
+            <input type="text" class="form-control" id="referencia" name="referencia">
+        </div>
+        <div class="mb-3">
+            <label for="banco" class="form-label">Banco (si aplica)</label>
+            <input type="text" class="form-control" id="banco" name="banco">
+        </div>
+        <div class="mb-3">
+            <label for="observaciones" class="form-label">Observaciones</label>
+            <textarea class="form-control" id="observaciones" name="observaciones" rows="3"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Registrar Cobro</button>
+        <a href="{{ url_for('ventas.listar_nc_nd') }}" class="btn btn-secondary">Cancelar</a>
+    </form>
+    {% else %}
+    <div class="alert alert-success">
+        <h5>Nota de Débito Completamente Pagada</h5>
+        <p>Esta ND fue pagada completamente el {{ nota.pagos[-1].fecha_pago.strftime('%d/%m/%Y %H:%M') if nota.pagos else 'N/A' }}</p>
+        <a href="{{ url_for('ventas.listar_nc_nd') }}" class="btn btn-secondary">Volver al Listado</a>
+    </div>
+    {% endif %}
+
+    <hr>
+    <h5>Historial de Pagos</h5>
+    {% if nota.pagos %}
+    <table class="table table-sm table-striped">
+        <thead class="table-light">
+            <tr>
+                <th>Fecha</th>
+                <th>Forma de Pago</th>
+                <th>Monto</th>
+                <th>Referencia</th>
+                <th>Banco</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for pago in nota.pagos %}
+            <tr>
+                <td>{{ pago.fecha_pago.strftime('%d/%m/%Y %H:%M') }}</td>
+                <td>{{ pago.forma_pago.nombre }}</td>
+                <td>Gs. {{ '{:,.0f}'.format(pago.monto) }}</td>
+                <td>{{ pago.referencia or '-' }}</td>
+                <td>{{ pago.banco or '-' }}</td>
+                <td><span class="badge bg-success">{{ pago.estado }}</span></td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="text-muted">Sin pagos registrados aún</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,153 @@
+ANTES vs AHORA - COMPARATIVA VISUAL
+
+═══════════════════════════════════════════════════════════════
+
+NOTA DE DÉBITO - ANTES (Usando GeneradorTicket genérico):
+───────────────────────────────────────────────────────────────
+JUGUETERÍA ARSENAL MINOVSKY
+RUC: 80012345-6
+Tel: 021-123456
+
+FACTURA                           ← ❌ Título incorrecto
+Timbrado: 12345678
+Vence: 31/12/2026
+Nro: ND-0000007
+Fecha: 05/02/2026 12:39
+Condición: NOTA DE DÉBITO         ← Solo condición, no es claro
+
+CLIENTE:
+ANGEL SANABRIA FERNANDEZ
+RUC/CI: 5233922
+
+DESCRIPCIÓN             CANT PRECIO  TOTAL
+Intereses               1    10.000   10.000
+
+Gravada 10%:                        10.000
+IVA 10%:                             909
+TOTAL IVA:                          909
+
+TOTAL A PAGAR:                10.000 Gs.
+
+═══════════════════════════════════════════════════════════════
+
+NOTA DE DÉBITO - AHORA (SET-Compliant):
+───────────────────────────────────────────────────────────────
+JUGUETERÍA ARSENAL MINOVSKY
+RUC: 80012345-6
+Tel: 021-123456
+
+NOTA DE DÉBITO                    ← ✅ Título claro, 14pt
+Timbrado: 12345678
+Vence: 31/12/2026                ← ✅ Vencimiento visible
+Nro: ND-0000007
+Fecha: 05/02/2026 12:39
+
+MODIFICA FACTURA:                 ← ✅ NUEVA - Referencia a original
+N°: 001-001-0000456
+Fecha: 15/01/2026                 ← ✅ NUEVA - Fecha de factura
+
+CLIENTE:
+ANGEL SANABRIA FERNANDEZ
+RUC/CI: 5233922
+
+MOTIVO:                           ← ✅ Motivo completo
+Intereses por mora
+
+DESCRIPCIÓN             CANT PRECIO  TOTAL
+Intereses               1    10.000   10.000
+
+Factura Original:                  100.000 Gs.
+Débito Adicional:              +    10.000 Gs.
+───────────────────────────────────────────
+NUEVO TOTAL A PAGAR:              110.000 Gs.  ← ✅ Cálculo claro
+
+PAGO:                             ← ✅ NUEVA - Info de pago
+Estado: pendiente
+
+Documento tributario válido
+Original: Cliente
+
+═══════════════════════════════════════════════════════════════
+
+NOTA DE CRÉDITO - ANTES:
+───────────────────────────────────────────────────────────────
+JUGUETERÍA ARSENAL MINOVSKY
+RUC: 80012345-6
+Tel: 021-123456
+
+FACTURA
+Timbrado: 12345678
+Vence: 31/12/2026
+Nro: NC-0000013
+Fecha: 26/01/2026 17:29
+Condición: NOTA DE CRÉDITO
+
+CLIENTE:
+ANGEL SANABRIA FERNANDEZ
+RUC/CI: 5233922
+
+DESCRIPCIÓN             CANT PRECIO  TOTAL
+Montaje de Juguetes     1    50.000   50.000
+
+Gravada 10%:                        50.000
+IVA 10%:                           4.545
+TOTAL IVA:                         4.545
+
+TOTAL A PAGAR:                50.000 Gs.
+
+═══════════════════════════════════════════════════════════════
+
+NOTA DE CRÉDITO - AHORA (SET-Compliant):
+───────────────────────────────────────────────────────────────
+JUGUETERÍA ARSENAL MINOVSKY
+RUC: 80012345-6
+Tel: 021-123456
+
+NOTA DE CRÉDITO                    ← ✅ Título claro, 14pt
+Timbrado: 12345678
+Vence: 31/12/2026                 ← ✅ Vencimiento visible
+Nro: NC-0000013
+Fecha: 26/01/2026 17:29
+
+MODIFICA FACTURA:                  ← ✅ NUEVA - Referencia clara
+N°: 001-001-0000123
+Fecha: 20/01/2026                  ← ✅ NUEVA - Fecha de factura
+
+CLIENTE:
+ANGEL SANABRIA FERNANDEZ
+RUC/CI: 5233922
+
+MOTIVO:                            ← ✅ Motivo
+Defecto en producto
+
+PRODUCTOS DEVUELTOS:               ← ✅ NUEVA - Encabezado claro
+DESCRIPCIÓN         CANT    MONTO
+─────────────────────────────────
+Montaje de Juguetes  1      50.000
+
+Factura Original:                  100.000 Gs.
+Crédito a Favor:               -    50.000 Gs.
+───────────────────────────────────────────
+NUEVO SALDO:                        50.000 Gs.  ← ✅ Cálculo claro
+
+Documento tributario válido
+Original: Cliente
+
+═══════════════════════════════════════════════════════════════
+
+ELEMENTOS CLAVE AGREGADOS (✅ Cumple SET Paraguay):
+
+1. ✅ Factura original REFERENCIADA con N° y FECHA
+2. ✅ Timbrado VENCE visiblemente
+3. ✅ Título del documento CLARO Y DESTACADO
+4. ✅ MOTIVO completo (no abreviado)
+5. ✅ PRODUCTOS DEVUELTOS en NC (con tabla clara)
+6. ✅ CÁLCULO MATEMÁTICO visible:
+   - Para ND: Original + Débito = Nuevo Total
+   - Para NC: Original - Crédito = Nuevo Saldo
+7. ✅ Estado de pago claramente visible
+8. ✅ Mejor organización visual
+9. ✅ Formato 80mm (papel térmico)
+10. ✅ Información tributaria completa
+
+═══════════════════════════════════════════════════════════════

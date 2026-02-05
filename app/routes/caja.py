@@ -6,7 +6,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from app.utils.roles import require_roles
 from app import db
-from app.models import Caja, AperturaCaja, Venta, Pago, FormaPago
+from app.models import Caja, AperturaCaja, Venta, Pago, FormaPago, PagoNotaDebito
 from datetime import datetime
 from decimal import Decimal
 from sqlalchemy import func, and_
@@ -33,7 +33,7 @@ def calcular_totales_por_forma_pago(apertura_id):
         'cheque': Decimal('0')
     }
     
-    # Agrupar pagos confirmados por forma de pago
+    # Agrupar pagos confirmados por forma de pago (Ventas)
     for venta in ventas:
         total_venta = Decimal(venta.total)
         pagado = Decimal('0')
@@ -55,6 +55,23 @@ def calcular_totales_por_forma_pago(apertura_id):
                 elif 'cheque' in forma_nombre:
                     totales['cheque'] += monto_pago
                     pagado += monto_pago
+
+    # Agregar pagos de Notas de Débito (ND)
+    pagos_nd = PagoNotaDebito.query.filter_by(
+        apertura_caja_id=apertura_id,
+        estado='confirmado'
+    ).all()
+    for pago in pagos_nd:
+        forma_nombre = pago.forma_pago.nombre.lower() if pago.forma_pago else 'otros'
+        monto_pago = Decimal(pago.monto)
+        if 'efectivo' in forma_nombre:
+            totales['efectivo'] += monto_pago
+        elif 'tarjeta' in forma_nombre or 'débito' in forma_nombre or 'crédito' in forma_nombre:
+            totales['tarjeta'] += monto_pago
+        elif 'transferencia' in forma_nombre:
+            totales['transferencia'] += monto_pago
+        elif 'cheque' in forma_nombre:
+            totales['cheque'] += monto_pago
     
     totales['total'] = totales['efectivo'] + totales['tarjeta'] + totales['transferencia'] + totales['cheque']
     
@@ -401,6 +418,14 @@ def ver_apertura(id):
         for pago in venta.pagos:
             if pago.estado == 'confirmado':
                 total_caja += pago.monto
+
+    # Sumar pagos de Notas de Débito asociados a esta apertura
+    pagos_nd = PagoNotaDebito.query.filter_by(
+        apertura_caja_id=apertura.id,
+        estado='confirmado'
+    ).all()
+    for pago in pagos_nd:
+        total_caja += pago.monto
     
     total_ventas = sum(v.total for v in ventas)
     

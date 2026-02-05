@@ -29,13 +29,31 @@
             <div class="col-md-6">
             </div>
         </div>
-        <div class="mb-3">
-            <label for="motivo" class="form-label">Motivo</label>
-            <input type="text" class="form-control" id="motivo" name="motivo" required>
+        <input type="hidden" name="tipo" value="cargo">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="motivo_tipo" class="form-label">Motivo del Cargo</label>
+                    <select class="form-control" id="motivo_tipo" name="motivo_tipo" required>
+                        <option value="">-- Seleccione un motivo --</option>
+                        <option value="Intereses por mora en pagos">Intereses por mora en pagos</option>
+                        <option value="Gastos administrativos">Gastos administrativos</option>
+                        <option value="Recargos por pagos retrasados">Recargos por pagos retrasados</option>
+                        <option value="Fletes o envíos adicionales">Fletes o envíos adicionales</option>
+                        <option value="otro">Otro (especificar)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3" id="motivo_otro_container" style="display: none;">
+                    <label for="motivo_otro" class="form-label">Especifique el motivo</label>
+                    <input type="text" class="form-control" id="motivo_otro" name="motivo_otro" placeholder="Ej: Reparación especial">
+                </div>
+            </div>
         </div>
         <div class="mb-3">
             <label for="observaciones" class="form-label">Observaciones</label>
-            <textarea class="form-control" id="observaciones" name="observaciones"></textarea>
+            <textarea class="form-control" id="observaciones" name="observaciones" rows="3"></textarea>
         </div>
         <h5>Detalle de la Nota de Débito</h5>
         <table class="table" id="tabla-detalle-nd">
@@ -154,6 +172,20 @@
         console.log('Agregar ND:', {desc, cant, precio});
         if (!desc || cant <= 0 || isNaN(precio) || precio < 0) return;
         detalleND.push({ descripcion: desc, cantidad: cant, precio_unitario: precio, iva: 10 });
+    
+    // Mostrar/ocultar campo de motivo personalizado
+    document.getElementById('motivo_tipo').addEventListener('change', function() {
+        const container = document.getElementById('motivo_otro_container');
+        const inputOtro = document.getElementById('motivo_otro');
+        if (this.value === 'otro') {
+            container.style.display = 'block';
+            inputOtro.required = true;
+        } else {
+            container.style.display = 'none';
+            inputOtro.required = false;
+            inputOtro.value = '';
+        }
+    });
         renderDetalleND();
         document.getElementById('desc-nuevo').value = '';
         document.getElementById('cant-nuevo').value = 1;
