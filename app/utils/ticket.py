@@ -102,7 +102,7 @@ class GeneradorTicket:
         lines.append(f"Vence: {self.config.fecha_vencimiento_timbrado.strftime('%d/%b/%Y').upper()}")
         lines.append(f"FACTURA Nro: {self.venta.numero_factura}")
         lines.append(f"Fecha: {self.venta.fecha_venta.strftime('%d/%m/%Y %H:%M')}")
-        lines.append(f"Condición: {self.venta.tipo_venta.upper()}")
+        lines.append("Condición: CONTADO")
         lines.append("-" * ancho)
         
         # Datos del cliente
@@ -320,8 +320,7 @@ class GeneradorTicket:
             c.drawString(x_margin, y, f"Fecha: {fecha_str}")
             y -= 3.5 * mm
             
-            tipo_venta = self.venta.tipo_venta.upper()
-            c.drawString(x_margin, y, f"Condición: {tipo_venta}")
+            c.drawString(x_margin, y, "Condición: CONTADO")
             y -= 4 * mm
             
             # Línea separadora
