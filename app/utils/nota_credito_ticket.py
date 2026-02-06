@@ -300,7 +300,7 @@ def generar_nota_credito_ticket_pdf(nota):
         # Crédito a Favor
         credito_str = f"{int(nota.monto):,}".replace(',', '.')
         c.drawString(x_margin, y, "Crédito a Favor:")
-        c.drawRightString(ancho_ticket - x_margin, y, f"- {credito_str} Gs.")
+        c.drawRightString(ancho_ticket - x_margin, y, f"{credito_str} Gs.")
         y -= 5 * mm
         
         # Línea antes del nuevo saldo
