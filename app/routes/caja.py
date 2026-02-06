@@ -62,9 +62,13 @@ def calcular_totales_por_forma_pago(apertura_id):
         estado='confirmado'
     ).all()
     for pago in pagos_nd:
-        forma_nombre = pago.forma_pago.nombre.lower() if pago.forma_pago else 'otros'
+        forma_nombre = pago.forma_pago.nombre.lower() if pago.forma_pago else None
         monto_pago = Decimal(pago.monto)
-        if 'efectivo' in forma_nombre:
+        if forma_nombre is None:
+            # Loguear advertencia y sumar como efectivo
+            registrar_bitacora('arqueo-warning', f"Pago ND sin forma_pago_id (id={pago.id}), sumado como efectivo")
+            totales['efectivo'] += monto_pago
+        elif 'efectivo' in forma_nombre:
             totales['efectivo'] += monto_pago
         elif 'tarjeta' in forma_nombre or 'débito' in forma_nombre or 'crédito' in forma_nombre:
             totales['tarjeta'] += monto_pago
@@ -272,10 +276,10 @@ def cerrar():
             }
             
             # Generar PDF
-            # Los totales esperados deben incluir el monto_inicial en efectivo
+            # Los totales esperados deben incluir el monto_inicial en efectivo y restar egresos
             totales_con_inicial = totales.copy()
-            totales_con_inicial['efectivo'] = apertura.monto_inicial + totales['efectivo']
-            totales_con_inicial['total'] = apertura.monto_inicial + totales['total']
+            totales_con_inicial['efectivo'] = apertura.monto_inicial + totales['efectivo'] - total_egresos
+            totales_con_inicial['total'] = apertura.monto_inicial + totales['total'] - total_egresos
             
             pdf_buffer = generar_reporte_arqueo(apertura, totales_con_inicial, empresa_config)
             

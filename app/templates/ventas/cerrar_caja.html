@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Cerrar Caja{% endblock %}
+{% block page_title %}Cerrar Caja{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card mt-4">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0"><i class="fas fa-door-closed"></i> Cierre de Caja</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label">Monto Final en Efectivo *</label>
+                        <input type="number" class="form-control" name="monto_final" min="0" step="0.01" required value="{{ apertura.monto_efectivo_real or '' }}">
+                        <small class="text-muted">Esperado: Gs. {{ "{:,.0f}".format(apertura.monto_efectivo_esperado or 0) }}</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Monto en Tarjeta</label>
+                        <input type="number" class="form-control" name="monto_tarjeta_real" min="0" step="0.01" value="{{ apertura.monto_tarjeta_real or '' }}">
+                        <small class="text-muted">Esperado: Gs. {{ "{:,.0f}".format(apertura.monto_tarjeta_esperado or 0) }}</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Monto en Transferencias</label>
+                        <input type="number" class="form-control" name="monto_transferencias_real" min="0" step="0.01" value="{{ apertura.monto_transferencias_real or '' }}">
+                        <small class="text-muted">Esperado: Gs. {{ "{:,.0f}".format(apertura.monto_transferencias_esperado or 0) }}</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Monto en Cheques</label>
+                        <input type="number" class="form-control" name="monto_cheques_real" min="0" step="0.01" value="{{ apertura.monto_cheques_real or '' }}">
+                        <small class="text-muted">Esperado: Gs. {{ "{:,.0f}".format(apertura.monto_cheques_esperado or 0) }}</small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Observaciones de Cierre</label>
+                        <textarea class="form-control" name="observaciones" rows="2">{{ apertura.observaciones or '' }}</textarea>
+                    </div>
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a href="{{ url_for('ventas.ver_apertura', id=apertura.id) }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-door-closed"></i> Cerrar Caja
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

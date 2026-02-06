@@ -1,0 +1,42 @@
+<!-- Modal para cerrar caja (básico) -->
+<div class="modal fade" id="modalCerrarCaja" tabindex="-1" aria-labelledby="modalCerrarCajaLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalCerrarCajaLabel">Cerrar Caja y Arqueo</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form method="POST" action="{{ url_for('caja.cerrar') }}" id="formCerrarCaja">
+          <div class="mb-3">
+            <!-- DEBUG: Formulario modal_cerrar.html cargado -->
+            <label for="monto_efectivo" class="form-label">Total en Efectivo *</label>
+            <input type="number" name="monto_efectivo" class="form-control" required>
+            <small class="text-muted">Esperado: Gs. {{ apertura_actual.monto_efectivo_esperado if apertura_actual else 0 }}</small>
+          </div>
+          <div class="mb-3">
+            <label for="monto_tarjeta" class="form-label">Total en Tarjeta</label>
+            <input type="number" name="monto_tarjeta" class="form-control">
+            <small class="text-muted">Esperado: Gs. {{ apertura_actual.monto_tarjeta_esperado if apertura_actual else 0 }}</small>
+          </div>
+          <div class="mb-3">
+            <label for="monto_transferencias" class="form-label">Total en Transferencias</label>
+            <input type="number" name="monto_transferencias" class="form-control">
+            <small class="text-muted">Esperado: Gs. {{ apertura_actual.monto_transferencias_esperado if apertura_actual else 0 }}</small>
+          </div>
+          <div class="mb-3">
+            <label for="monto_cheques" class="form-label">Total en Cheques</label>
+            <input type="number" name="monto_cheques" class="form-control">
+            <small class="text-muted">Esperado: Gs. {{ apertura_actual.monto_cheques_esperado if apertura_actual else 0 }}</small>
+          </div>
+          <div class="mb-3">
+            <label for="observaciones_cierre" class="form-label">Observaciones de Cierre</label>
+            <textarea name="observaciones_cierre" class="form-control" rows="2"></textarea>
+          </div>
+            <!-- DEBUG: Botón de cierre renderizado -->
+            <button type="submit" class="btn btn-danger w-100">Cerrar Caja y Arquear</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

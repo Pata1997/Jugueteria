@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5 text-center">
+    <h4>Generando Arqueo de Caja...</h4>
+    {% if error %}
+        <div class="alert alert-danger mt-3">Error: {{ error }}</div>
+    {% else %}
+        <p>El reporte de arqueo de caja se está descargando. Serás redirigido automáticamente.</p>
+    {% endif %}
+    <a href="{{ arqueo_url }}" class="btn btn-primary mt-3">Ir al arqueo</a>
+</div>
+<script>
+    window.onload = function() {
+        {% if pdf_url %}
+        window.open("{{ pdf_url }}", "_blank");
+        setTimeout(function() {
+            window.location.href = "{{ arqueo_url }}";
+        }, 2000);
+        {% else %}
+        // Si hay error, no intentamos descargar PDF
+        {% endif %}
+    };
+</script>
+{% endblock %}

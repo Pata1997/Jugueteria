@@ -224,63 +224,63 @@ def generar_nota_debito_ticket_pdf(nota):
         c.line(x_margin, y, ancho_ticket - x_margin, y)
         y -= 4 * mm
         
-        # ============== DETALLE DE CARGOS ==============
-        
+        # ============== DETALLE ==============
+        c.setFont("Helvetica-Bold", 8)
+        c.drawString(x_margin, y, "DETALLE:")
+        y -= 4 * mm
         # Obtener detalles - intentar desde relación primero
         if hasattr(nota, 'detalles') and nota.detalles:
             detalles = nota.detalles
         else:
             from app.models.nota_debito_detalle import NotaDebitoDetalle
             detalles = NotaDebitoDetalle.query.filter_by(nota_debito_id=nota.id).all()
-        
         if detalles:
             c.setFont("Helvetica-Bold", 7)
             c.drawString(x_margin, y, "DESCRIPCIÓN")
             c.drawRightString(ancho_ticket - x_margin, y, "MONTO")
             y -= 3 * mm
-            
             c.setLineWidth(0.3)
             c.line(x_margin, y, ancho_ticket - x_margin, y)
             y -= 3 * mm
-            
             c.setFont("Helvetica", 7)
             for detalle in detalles:
-                descripcion = detalle.descripcion[:30]
+                descripcion = detalle.descripcion[:28]
                 monto_str = f"{int(detalle.subtotal):,}".replace(',', '.')
-                
                 c.drawString(x_margin, y, descripcion)
                 c.drawRightString(ancho_ticket - x_margin, y, monto_str)
                 y -= 3.5 * mm
-            
             y -= 1 * mm
-        
         # Línea separadora
         c.setLineWidth(0.5)
         c.line(x_margin, y, ancho_ticket - x_margin, y)
         y -= 4 * mm
         
-        # ============== SECCIÓN DE PAGO O CÁLCULO ==============
-        
-        # Si la ND está PAGADA, mostrar formas de pago. Si no, mostrar cálculo
+        # ============== DISCRIMINACIÓN DEL IVA ==============
+        c.setFont("Helvetica-Bold", 8)
+        c.drawString(x_margin, y, "DISCRIMINACIÓN DEL IVA:")
+        y -= 4 * mm
+        c.setFont("Helvetica", 7)
+        monto_nd = nota.monto_total if hasattr(nota, 'monto_total') else nota.monto
+        gravada_10 = int(monto_nd)
+        iva_10 = int(round(gravada_10 / 11))
+        total_iva = iva_10
+        c.drawString(x_margin, y, f"Gravada 10%: {gravada_10:,} Gs.".replace(',', '.'))
+        y -= 3 * mm
+        c.drawString(x_margin, y, f"IVA 10%: {iva_10:,} Gs.".replace(',', '.'))
+        y -= 3 * mm
+        c.drawString(x_margin, y, f"TOTAL IVA: {total_iva:,} Gs.".replace(',', '.'))
+        y -= 4 * mm
+
+        # ============== TOTAL NOTA DE DÉBITO ==============
+        c.setFont("Helvetica-Bold", 8)
+        c.drawString(x_margin, y, f"TOTAL NOTA DE DÉBITO: {int(monto_nd):,} Gs.".replace(',', '.'))
+        y -= 5 * mm
+
+        # ============== FORMAS DE PAGO ==============
         if nota.estado_pago == 'pagado':
-            # MOSTRAR FORMAS DE PAGO Y VUELTO
-            c.setFont("Helvetica-Bold", 8)
-            c.drawString(x_margin, y, "MONTO A PAGAR:")
-            monto_nd = nota.monto_total if hasattr(nota, 'monto_total') else nota.monto
-            monto_nd_str = f"{int(monto_nd):,}".replace(',', '.')
-            c.drawRightString(ancho_ticket - x_margin, y, f"{monto_nd_str} Gs.")
-            y -= 5 * mm
-            
-            # Línea antes de pagos
-            c.setLineWidth(0.5)
-            c.line(x_margin, y, ancho_ticket - x_margin, y)
-            y -= 4 * mm
-            
-            # Mostrar formas de pago
             c.setFont("Helvetica-Bold", 8)
             c.drawString(x_margin, y, "FORMAS DE PAGO:")
             y -= 4 * mm
-            
             c.setFont("Helvetica", 7)
             total_pagado = Decimal('0')
             if hasattr(nota, 'pagos') and nota.pagos:
@@ -292,72 +292,23 @@ def generar_nota_debito_ticket_pdf(nota):
                         c.drawRightString(ancho_ticket - x_margin, y, f"{monto_pago} Gs.")
                         y -= 3.5 * mm
                         total_pagado += Decimal(str(pago.monto))
-            
             y -= 2 * mm
-            
-            # Línea antes del vuelto
-            c.setLineWidth(0.5)
-            c.line(x_margin, y, ancho_ticket - x_margin, y)
+            # TOTAL COBRADO
+            c.setFont("Helvetica-Bold", 8)
+            c.drawString(x_margin, y, f"TOTAL COBRADO: {int(total_pagado):,} Gs.".replace(',', '.'))
             y -= 4 * mm
-            
-            # Vuelto si hay
-            c.setFont("Helvetica", 7)
-            vuelto = total_pagado - Decimal(str(monto_nd))
-            if vuelto > 0:
-                c.drawString(x_margin, y, "Vuelto:")
-                vuelto_str = f"{int(vuelto):,}".replace(',', '.')
-                c.drawRightString(ancho_ticket - x_margin, y, f"{vuelto_str} Gs.")
+            # SALDO ND nunca negativo
+            saldo_nd = max(0, int(monto_nd - total_pagado))
+            c.setFont("Helvetica-Bold", 8)
+            c.drawString(x_margin, y, f"SALDO ND: {saldo_nd:,} Gs.".replace(',', '.'))
+            y -= 4 * mm
+            # Si saldo es 0, mostrar mensaje de cancelación
+            if saldo_nd == 0:
+                c.setFont("Helvetica-Bold", 8)
+                c.drawString(x_margin, y, "Nota de Débito cancelada en su totalidad.")
                 y -= 4 * mm
-        else:
-            # MOSTRAR CÁLCULO DEL NUEVO TOTAL (para pendientes)
-            c.setFont("Helvetica", 8)
-            
-            # Factura Original
-            if nota.venta:
-                monto_original = f"{int(nota.venta.total):,}".replace(',', '.')
-                c.drawString(x_margin, y, "Factura Original:")
-                c.drawRightString(ancho_ticket - x_margin, y, f"{monto_original} Gs.")
-                y -= 4 * mm
-            
-            # Débito Adicional
-            monto_nd = nota.monto_total if hasattr(nota, 'monto_total') else nota.monto
-            debito_str = f"{int(monto_nd):,}".replace(',', '.')
-            c.drawString(x_margin, y, "Débito Adicional:")
-            c.drawRightString(ancho_ticket - x_margin, y, f"+ {debito_str} Gs.")
-            y -= 5 * mm
-            
-            # Línea antes del nuevo total
-            c.setLineWidth(1)
-            c.line(x_margin, y, ancho_ticket - x_margin, y)
-            y -= 5 * mm
-            
-            # NUEVO TOTAL A PAGAR - Destacado
-            c.setFont("Helvetica-Bold", 11)
-            c.drawString(x_margin, y, "NUEVO TOTAL A PAGAR:")
-            
-            if nota.venta:
-                nuevo_total = nota.venta.total + monto_nd
-            else:
-                nuevo_total = monto_nd
-            
-            nuevo_total_str = f"{int(nuevo_total):,} Gs.".replace(',', '.')
-            c.drawRightString(ancho_ticket - x_margin, y, nuevo_total_str)
-            y -= 6 * mm
-            
-            # Línea después del total
-            c.setLineWidth(1)
-            c.line(x_margin, y, ancho_ticket - x_margin, y)
-            y -= 6 * mm
         
-        # ============== INFORMACIÓN DE ESTADO ==============
-        
-        c.setFont("Helvetica-Bold", 8)
-        c.drawString(x_margin, y, "ESTADO:")
-        y -= 3.5 * mm
-        
-        c.setFont("Helvetica", 7)
-        c.drawString(x_margin, y, f"Estado: {nota.estado_pago or 'pendiente'}")
-        y -= 5 * mm
+        # (No imprimir estado del sistema ni "Estado: pagado")
         
         # ============== PIE DE PÁGINA ==============
         

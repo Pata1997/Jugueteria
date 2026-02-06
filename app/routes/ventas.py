@@ -150,38 +150,50 @@ def cerrar_caja(id):
     apertura = AperturaCaja.query.get_or_404(id)
     if request.method == 'POST':
         try:
+            print("[CERRAR CAJA] POST data:", dict(request.form))
             apertura.monto_final = Decimal(str(request.form.get('monto_final') or 0))
+            apertura.monto_efectivo_real = Decimal(str(request.form.get('monto_final') or 0))
+            apertura.monto_tarjeta_real = Decimal(str(request.form.get('monto_tarjeta_real') or 0))
+            apertura.monto_transferencias_real = Decimal(str(request.form.get('monto_transferencias_real') or 0))
+            apertura.monto_cheques_real = Decimal(str(request.form.get('monto_cheques_real') or 0))
             apertura.fecha_cierre = datetime.utcnow()
             apertura.estado = 'cerrado'
             apertura.observaciones = request.form.get('observaciones')
+            print(f"[CERRAR CAJA] Valores guardados: monto_final={apertura.monto_final}, efectivo_real={apertura.monto_efectivo_real}, tarjeta_real={apertura.monto_tarjeta_real}, transferencias_real={apertura.monto_transferencias_real}, cheques_real={apertura.monto_cheques_real}, observaciones={apertura.observaciones}")
             apertura.calcular_cierre()
+            print(f"[CERRAR CAJA] monto_sistema={apertura.monto_sistema}, diferencia={apertura.diferencia}")
             db.session.commit()
+            print(f"[CERRAR CAJA] Commit exitoso para apertura {apertura.id}")
             registrar_bitacora('cierre-caja', f'Cierre de caja: {apertura.caja_id} por usuario {current_user.username}')
             flash('Caja cerrada correctamente', 'success')
-            return redirect(url_for('ventas.arqueo_caja', id=id))
+            # Página intermedia: descarga PDF de arqueo y redirige
+            arqueo_url = url_for('ventas.arqueo_caja', id=id)
+            pdf_url = url_for('reportes.ventas_diarias_pdf') + f'?desde={apertura.fecha_apertura.strftime("%Y-%m-%d")}'
+            return render_template('ventas/descargar_arqueo_y_redirigir.html', pdf_url=pdf_url, arqueo_url=arqueo_url, error=None)
         except Exception as e:
             db.session.rollback()
-            flash(f'Error: {str(e)}', 'danger')
-    # Calcular totales para mostrar
-    apertura.calcular_cierre()
+            print(f"[CERRAR CAJA] ERROR: {e}")
+            import traceback
+            traceback.print_exc()
+            # Mostrar el error en la página intermedia
+            arqueo_url = url_for('ventas.arqueo_caja', id=id)
+            pdf_url = None
+            return render_template('ventas/descargar_arqueo_y_redirigir.html', pdf_url=pdf_url, arqueo_url=arqueo_url, error=str(e))
+    # Si la caja ya está cerrada, redirigir directo al arqueo
+    if apertura.estado == 'cerrado':
+        return redirect(url_for('ventas.arqueo_caja', id=id))
+    # Si es GET, mostrar el formulario de cierre
     return render_template('ventas/cerrar_caja.html', apertura=apertura)
 
 @bp.route('/arqueo/<int:id>')
 @login_required
 def arqueo_caja(id):
     apertura = AperturaCaja.query.get_or_404(id)
-    
-    # Totales por forma de pago
-    totales_por_forma = {}
-    for venta in apertura.ventas:
-        for pago in venta.pagos:
-            if pago.forma_pago not in totales_por_forma:
-                totales_por_forma[pago.forma_pago] = Decimal(0)
-            totales_por_forma[pago.forma_pago] += Decimal(pago.monto or 0)
-    
+    from app.utils.reports import calcular_totales_esperados_apertura
+    totales_esperados = calcular_totales_esperados_apertura(apertura)
     return render_template('ventas/arqueo_caja.html', 
                          apertura=apertura, 
-                         totales_por_forma=totales_por_forma)
+                         totales_esperados=totales_esperados)
 
 # ===== VENTAS =====
 @bp.route('/')
@@ -837,11 +849,26 @@ def cobrar_nota_debito(nota_id):
             
             # REGISTRAR CADA PAGO
             for pago_data in pagos:
+                # Validar forma_pago_id
+                forma_pago_id = pago_data.get('forma_pago_id')
+                try:
+                    forma_pago_id = int(forma_pago_id)
+                except (TypeError, ValueError):
+                    flash('La forma de pago es obligatoria y debe ser válida.', 'danger')
+                    registrar_bitacora('pago-nota-debito-error', f"Forma de pago inválida: {forma_pago_id}")
+                    raise ValueError('Forma de pago no seleccionada o inválida')
+                # Verificar que la FormaPago exista
+                forma_pago_obj = FormaPago.query.get(forma_pago_id)
+                if not forma_pago_obj:
+                    flash('La forma de pago seleccionada no existe.', 'danger')
+                    registrar_bitacora('pago-nota-debito-error', f"Forma de pago inexistente: {forma_pago_id}")
+                    raise ValueError('Forma de pago no encontrada')
+                registrar_bitacora('pago-nota-debito-debug', f"Registrando ND pago: forma_pago_id={forma_pago_id}, monto={pago_data['monto']}")
                 pago = PagoNotaDebito(
                     nota_debito_id=nota.id,
                     apertura_caja_id=apertura.id,
                     fecha_pago=datetime.utcnow(),
-                    forma_pago_id=pago_data['forma_pago_id'],
+                    forma_pago_id=forma_pago_id,
                     monto=Decimal(str(pago_data['monto'])),
                     referencia=pago_data.get('referencia', ''),
                     banco=pago_data.get('banco', ''),
