@@ -153,7 +153,7 @@
                     <i class="fas fa-users"></i> Clientes
                 </a>
                 {% endif %}
-                {% if rol in ['admin', 'recepcion', 'tecnico'] %}
+                {% if rol in ['admin', 'recepcion'] %}
                 <a class="nav-link" href="{{ url_for('productos.listar') }}">
                     <i class="fas fa-box"></i> Productos
                 </a>
@@ -163,10 +163,12 @@
                     <i class="fas fa-wrench"></i> Servicios
                 </a>
                 {% endif %}
-                {% if rol in ['admin', 'caja', 'vendedor'] %}
+                {% if rol in ['admin', 'caja', 'vendedor', 'recepcion'] %}
                 <a class="nav-link" href="{{ url_for('ventas.listar') }}">
                     <i class="fas fa-shopping-cart"></i> Ventas
                 </a>
+                {% endif %}
+                {% if rol in ['admin', 'caja', 'vendedor'] %}
                 <a class="nav-link ps-4" href="{{ url_for('ventas.listar_nc_nd') }}">
                     <i class="fas fa-file-alt"></i> Notas de Crédito/Débito
                 </a>
@@ -191,7 +193,7 @@
 
             <div class="nav-section">
                 <div class="px-3 py-2 text-white-50 small">GESTIÓN</div>
-                {% if rol in ['admin', 'tecnico'] %}
+                {% if rol == 'admin' %}
                 <a class="nav-link" href="{{ url_for('servicios.tipos') }}">
                     <i class="fas fa-list"></i> Tipos de Servicio
                 </a>

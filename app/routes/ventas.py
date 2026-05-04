@@ -198,7 +198,7 @@ def arqueo_caja(id):
 # ===== VENTAS =====
 @bp.route('/')
 @login_required
-@require_roles('admin', 'caja', 'vendedor')
+@require_roles('admin', 'caja', 'vendedor', 'recepcion')
 def listar():
     page = request.args.get('page', 1, type=int)
     fecha_desde = request.form.get('fecha_desde')
@@ -351,6 +351,7 @@ def crear():
 
 @bp.route('/<int:id>')
 @login_required
+@require_roles('admin', 'caja', 'vendedor', 'recepcion')
 def ver(id):
     venta = Venta.query.get_or_404(id)
     
