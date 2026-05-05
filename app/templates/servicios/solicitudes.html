@@ -69,40 +69,18 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for solicitud in solicitudes.items %}
+                    {% for solicitud in solicitudes %}
                     <tr>
                         <td>{{ solicitud.id }}</td>
                         <td>{{ solicitud.fecha_solicitud.strftime('%d/%m/%Y') }}</td>
-                        <td>{{ solicitud.cliente.nombre_completo }}</td>
-                        <td>{{ solicitud.tipo_servicio.nombre }}</td>
-                        <td>{{ solicitud.descripcion[:50] }}...</td>
+                        <td>{{ solicitud.cliente.nombre if solicitud.cliente else '-' }}</td>
+                        <td>{{ solicitud.tipo_servicio.nombre if solicitud.tipo_servicio else '-' }}</td>
+                        <td>{{ solicitud.descripcion }}</td>
+                        <td>{{ solicitud.prioridad }}</td>
+                        <td>{{ solicitud.estado }}</td>
                         <td>
-                            {% if solicitud.prioridad == 'alta' %}
-                                <span class="badge bg-danger">Alta</span>
-                            {% elif solicitud.prioridad == 'media' %}
-                                <span class="badge bg-warning">Media</span>
-                            {% else %}
-                                <span class="badge bg-info">Baja</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if solicitud.estado == 'pendiente' %}
-                                <span class="badge bg-warning">Pendiente</span>
-                            {% elif solicitud.estado == 'presupuestado' %}
-                                <span class="badge bg-info">Presupuestado</span>
-                            {% elif solicitud.estado == 'aprobado' %}
-                                <span class="badge bg-success">Aprobado</span>
-                            {% elif solicitud.estado == 'en_proceso' %}
-                                <span class="badge bg-primary">En Proceso</span>
-                            {% elif solicitud.estado == 'completado' %}
-                                <span class="badge bg-success">Completado</span>
-                            {% else %}
-                                <span class="badge bg-secondary">Cancelado</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <a href="{{ url_for('servicios.ver_solicitud', id=solicitud.id) }}" class="btn btn-sm btn-info">
-                                <i class="fas fa-eye"></i>
+                            <a href="{{ url_for('servicios.ver_solicitud', id=solicitud.id) }}" class="btn btn-sm btn-info" title="Ver Detalle">
+                                <i class="fas fa-eye"></i> Ver
                             </a>
                         </td>
                     </tr>

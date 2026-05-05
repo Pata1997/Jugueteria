@@ -200,6 +200,16 @@ class Compra(db.Model):
         """Calcula pendiente de pago"""
         return float(self.total) - self.monto_pagado()
 
+    @property
+    def tipo_pago(self):
+        # Si tiene crédito, es crédito
+        if self.plazo_credito_dias and self.plazo_credito_dias > 0:
+            return 'credito'
+        # Si está pagada y no tiene crédito, es contado
+        if self.estado == 'pagada' or (self.monto_pagado() >= float(self.total)):
+            return 'contado'
+        return None
+
 class CompraDetalle(db.Model):
     __tablename__ = 'compra_detalles'
     

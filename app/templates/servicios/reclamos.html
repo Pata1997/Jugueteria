@@ -28,21 +28,21 @@
                 {% for reclamo in reclamos %}
                 <tr>
                     <td>{{ reclamo.id }}</td>
-                    <td>{{ reclamo.factura or '-' }}</td>
-                    <td>{{ reclamo.cliente or '-' }}</td>
+                    <td>{% if reclamo.venta and reclamo.venta.numero_factura %}{{ reclamo.venta.numero_factura }}{% elif reclamo.documento_numero %}{{ reclamo.documento_numero }}{% else %}-{% endif %}</td>
+                    <td>{{ reclamo.cliente.nombre if reclamo.cliente else '-' }}</td>
                     <td>{{ reclamo.tipo_reclamo or '-' }}</td>
                     <td>{{ reclamo.descripcion or '-' }}</td>
                     <td>
-                        {% if reclamo.estado == 'pendiente' %}
-                            <span class="badge bg-warning text-dark">Pendiente</span>
-                        {% elif reclamo.estado == 'terminado' %}
-                            <span class="badge bg-success">Terminado</span>
-                        {% else %}
-                            <span class="badge bg-secondary">{{ reclamo.estado }}</span>
-                        {% endif %}
+                      {% if reclamo.estado == 'pendiente' %}
+                        <span class="badge bg-warning text-dark">Pendiente</span>
+                      {% elif reclamo.estado == 'terminado' %}
+                        <span class="badge bg-success">Terminado</span>
+                      {% else %}
+                        <span class="badge bg-secondary">{{ reclamo.estado }}</span>
+                      {% endif %}
                     </td>
                     <td>{{ reclamo.prioridad or '-' }}</td>
-                    <td>{{ reclamo.fecha_resolucion or '-' }}</td>
+                    <td>{% if reclamo.fecha_cierre %}{{ reclamo.fecha_cierre.strftime('%d/%m/%Y') }}{% elif reclamo.estado == 'terminado' and reclamo.fecha_resolucion %}{{ reclamo.fecha_resolucion.strftime('%d/%m/%Y') }}{% else %}-{% endif %}</td>
                     <td>
                         <a href="#" class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#modalEditarReclamo{{ reclamo.id }}">
                             <i class="fas fa-edit"></i>

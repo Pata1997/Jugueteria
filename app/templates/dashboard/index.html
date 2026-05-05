@@ -24,17 +24,13 @@
         </div>
     </div>
     
+    {% if current_user.rol != 'recepcion' and current_user.rol != 'tecnico' and current_user.rol != 'caja' %}
     <div class="col-md-3 mb-4">
         <div class="card border-left-success shadow h-100 py-2">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                            Ventas del Mes
-                        </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800">
-                            Gs. {{ "{:,.0f}".format(total_ventas_mes) }}
-                        </div>
+                        {# Ventas del Mes removido para Recepción y Técnico #}
                     </div>
                     <div class="col-auto">
                         <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
@@ -43,6 +39,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
     
     <div class="col-md-3 mb-4">
         <div class="card border-left-info shadow h-100 py-2">

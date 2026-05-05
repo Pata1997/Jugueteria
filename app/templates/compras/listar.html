@@ -97,9 +97,7 @@
                                         {% if compra.tipo_pago == 'contado' %}
                                             <span class="badge bg-success">Contado</span>
                                         {% elif compra.tipo_pago == 'credito' %}
-                                            <span class="badge bg-warning">
-                                                Crédito ({{ compra.dias_credito }}d)
-                                            </span>
+                                            <span class="badge bg-warning">Crédito</span>
                                         {% else %}
                                             <span class="text-muted">-</span>
                                         {% endif %}

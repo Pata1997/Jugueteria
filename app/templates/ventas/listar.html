@@ -36,8 +36,6 @@
                 </div>
             </div>
         </form>
-        
-        <!-- Tabla -->
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
@@ -57,7 +55,7 @@
                     <tr>
                         <td>{{ venta.numero_factura }}</td>
                         <td>{{ venta.fecha_venta.strftime('%d/%m/%Y %H:%M') }}</td>
-                        <td>{{ venta.cliente.nombre_completo if venta.cliente else 'Cliente Final' }}</td>
+                        <td>{{ venta.cliente.nombre if venta.cliente else '-' }}</td>
                         <td class="text-end">Gs. {{ "{:,.0f}".format(venta.total) }}</td>
                         <td class="text-end">Gs. {{ "{:,.0f}".format(venta.monto_pagado) }}</td>
                         <td class="text-end">Gs. {{ "{:,.0f}".format(venta.saldo_pendiente) }}</td>
