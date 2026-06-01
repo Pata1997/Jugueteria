@@ -264,6 +264,10 @@
                     </form>
                 {% endif %}
 
+                <a href="{{ url_for('servicios.imprimir_presupuesto_solicitud', id=solicitud.id) }}" target="_blank" class="btn btn-warning btn-sm w-100 mb-2">
+                    <i class="fas fa-print"></i> Imprimir Presupuesto
+                </a>
+
                 <a href="{{ url_for('servicios.solicitudes') }}" class="btn btn-secondary btn-sm w-100">
                     <i class="fas fa-arrow-left"></i> Volver
                 </a>

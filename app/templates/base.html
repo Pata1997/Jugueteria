@@ -67,6 +67,69 @@
         .sidebar .nav-link i {
             width: 25px;
         }
+
+        /* ===== SUBMENÚ ACCORDION ===== */
+        .sidebar .module-header {
+            color: rgba(255,255,255,0.85);
+            padding: 11px 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar .module-header:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+
+        .sidebar .module-header.open {
+            background: rgba(52,152,219,0.2);
+            border-left-color: var(--secondary-color);
+            color: white;
+        }
+
+        .sidebar .module-header .mod-icon {
+            width: 25px;
+            display: inline-block;
+        }
+
+        .sidebar .module-header .arrow {
+            font-size: 11px;
+            transition: transform 0.3s;
+            opacity: 0.7;
+        }
+
+        .sidebar .module-header.open .arrow {
+            transform: rotate(90deg);
+        }
+
+        .sidebar .submenu {
+            display: none;
+            background: rgba(0,0,0,0.15);
+        }
+
+        .sidebar .submenu.show {
+            display: block;
+        }
+
+        .sidebar .submenu .nav-link {
+            padding: 9px 20px 9px 48px;
+            font-size: 0.875rem;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar .submenu .nav-link:hover {
+            border-left-color: var(--secondary-color);
+        }
+
+        .sidebar .submenu .nav-link.active {
+            border-left-color: var(--secondary-color);
+            background: rgba(52,152,219,0.25);
+        }
         
         .main-content {
             margin-left: var(--sidebar-width);
@@ -142,13 +205,20 @@
         
         <nav class="nav flex-column mt-3">
             {% set rol = current_user.rol %}
+
+            {# ── INICIO ── #}
             <a class="nav-link" href="{{ url_for('dashboard.index') }}">
-                <i class="fas fa-home"></i> Dashboard
+                <i class="fas fa-home"></i> Inicio
             </a>
 
+            {# ── REFERENCIALES ── #}
             {% if rol in ['admin', 'recepcion', 'caja', 'tecnico'] %}
-            <div class="nav-section">
-                <div class="px-3 py-2 text-white-50 small">REFERENCIALES</div>
+            <div class="px-3 pt-3 pb-1 text-white-50 small fw-semibold">REFERENCIALES</div>
+            <div class="module-header" data-target="sub-referenciales">
+                <span><i class="fas fa-database mod-icon"></i> Referenciales</span>
+                <i class="fas fa-chevron-right arrow"></i>
+            </div>
+            <div class="submenu" id="sub-referenciales">
                 {% if rol in ['admin', 'recepcion'] %}
                 <a class="nav-link" href="{{ url_for('clientes.listar') }}">
                     <i class="fas fa-users"></i> Clientes
@@ -167,6 +237,20 @@
                     <i class="fas fa-building"></i> Proveedores
                 </a>
                 {% endif %}
+            </div>
+            {% endif %}
+
+            {# ── MÓDULO DE SERVICIOS ── #}
+            {% if rol in ['admin', 'tecnico', 'recepcion'] %}
+            <div class="px-3 pt-3 pb-1 text-white-50 small fw-semibold">MÓDULOS</div>
+            <div class="module-header" data-target="sub-servicios">
+                <span><i class="fas fa-wrench mod-icon"></i> Módulo de Servicios</span>
+                <i class="fas fa-chevron-right arrow"></i>
+            </div>
+            <div class="submenu" id="sub-servicios">
+                <a class="nav-link" href="{{ url_for('servicios.solicitudes') }}">
+                    <i class="fas fa-clipboard-list"></i> Solicitudes de Servicio
+                </a>
                 {% if rol in ['admin', 'tecnico', 'recepcion'] %}
                 <a class="nav-link" href="{{ url_for('servicios.reclamos') }}">
                     <i class="fas fa-exclamation-triangle"></i> Reclamos
@@ -175,55 +259,78 @@
             </div>
             {% endif %}
 
-            <div class="nav-section">
-                <div class="px-3 py-2 text-white-50 small">MÓDULOS</div>
-                {% if rol in ['admin', 'tecnico', 'recepcion'] %}
-                <a class="nav-link" href="{{ url_for('servicios.solicitudes') }}">
-                    <i class="fas fa-wrench"></i> Servicios
-                </a>
-                {% endif %}
-                {% if rol in ['admin', 'caja', 'vendedor', 'recepcion'] %}
+            {# ── MÓDULO DE VENTAS ── #}
+            {% if rol in ['admin', 'caja', 'vendedor', 'recepcion'] %}
+            {% if rol not in ['tecnico'] %}
+            <div class="module-header" data-target="sub-ventas">
+                <span><i class="fas fa-shopping-cart mod-icon"></i> Módulo de Ventas</span>
+                <i class="fas fa-chevron-right arrow"></i>
+            </div>
+            <div class="submenu" id="sub-ventas">
                 <a class="nav-link" href="{{ url_for('ventas.listar') }}">
-                    <i class="fas fa-shopping-cart"></i> Ventas
+                    <i class="fas fa-file-invoice-dollar"></i> Pendientes a Cobro
                 </a>
-                {% endif %}
                 {% if rol in ['admin', 'caja', 'vendedor'] %}
-                <a class="nav-link ps-4" href="{{ url_for('ventas.listar_nc_nd') }}">
-                    <i class="fas fa-file-alt"></i> Notas de Crédito/Débito
+                <a class="nav-link" href="{{ url_for('ventas.listar_nc_nd') }}?tab=credito">
+                    <i class="fas fa-file-minus"></i> Nota de Crédito
                 </a>
-                {% endif %}
-                {% if rol in ['admin', 'caja'] %}
-                <a class="nav-link" href="{{ url_for('compras.listar') }}">
-                    <i class="fas fa-truck"></i> Compras
-                </a>
-                <a class="nav-link ps-4" href="{{ url_for('compras.pendientes_pago') }}">
-                    <i class="fas fa-clock"></i> Pendientes de Pago
-                </a>
-                <a class="nav-link ps-4" href="{{ url_for('compras.cuentas_por_pagar_compras') }}">
-                    <i class="fas fa-hand-holding-usd"></i> Compras a Crédito
+                <a class="nav-link" href="{{ url_for('ventas.listar_nc_nd') }}?tab=debito">
+                    <i class="fas fa-file-plus"></i> Nota de Débito
                 </a>
                 {% endif %}
                 {% if rol in ['admin', 'caja'] %}
                 <a class="nav-link" href="{{ url_for('caja.estado') }}">
-                    <i class="fas fa-cash-register"></i> Estado de Caja
+                    <i class="fas fa-cash-register"></i> Apertura y Cierre de Caja
                 </a>
                 {% endif %}
             </div>
+            {% endif %}
+            {% endif %}
 
-
-
-            {% if rol not in ['caja', 'recepcion', 'tecnico'] %}
-            <div class="nav-section">
-                <div class="px-3 py-2 text-white-50 small">REPORTES</div>
-                <a class="nav-link" href="{{ url_for('reportes.index') }}">
-                    <i class="fas fa-chart-bar"></i> Reportes
+            {# ── MÓDULO DE COMPRAS ── #}
+            {% if rol in ['admin', 'caja'] %}
+            <div class="module-header" data-target="sub-compras">
+                <span><i class="fas fa-truck mod-icon"></i> Módulo de Compras</span>
+                <i class="fas fa-chevron-right arrow"></i>
+            </div>
+            <div class="submenu" id="sub-compras">
+                <a class="nav-link" href="{{ url_for('compras.presupuestos_lista') }}">
+                    <i class="fas fa-file-invoice"></i> Presupuestos
+                </a>
+                <a class="nav-link" href="{{ url_for('compras.listar') }}">
+                    <i class="fas fa-truck-loading"></i> Gestión de Compras
+                </a>
+                <a class="nav-link" href="{{ url_for('compras.pendientes_pago') }}">
+                    <i class="fas fa-clock"></i> Pendientes de Pago
+                </a>
+                <a class="nav-link" href="{{ url_for('compras.cuentas_por_pagar_compras') }}">
+                    <i class="fas fa-hand-holding-usd"></i> Compras a Crédito
+                </a>
+                <a class="nav-link" href="{{ url_for('compras.listar_nc_nd_compras') }}?tab=credito">
+                    <i class="fas fa-file-minus"></i> Nota de Crédito
+                </a>
+                <a class="nav-link" href="{{ url_for('compras.listar_nc_nd_compras') }}?tab=debito">
+                    <i class="fas fa-file-plus"></i> Nota de Débito
                 </a>
             </div>
             {% endif %}
-            
+
+            {# ── REPORTES ── #}
+            {% if rol not in ['caja', 'recepcion', 'tecnico'] %}
+            <div class="px-3 pt-3 pb-1 text-white-50 small fw-semibold">REPORTES</div>
+            <a class="nav-link" href="{{ url_for('reportes.index') }}">
+                <i class="fas fa-chart-bar"></i> Reportes
+            </a>
+            {% endif %}
+
+            {# ── ADMINISTRACIÓN ── #}
             {% if current_user.rol == 'admin' %}
-            <div class="nav-section">
-                <div class="px-3 py-2 text-white-50 small">ADMINISTRACIÓN</div>
+            <div class="px-3 pt-3 pb-1 text-white-50 small fw-semibold">ADMINISTRACIÓN</div>
+            <div class="module-header" data-target="sub-admin">
+                <span><i class="fas fa-shield-alt mod-icon"></i> Administración</span>
+                <i class="fas fa-chevron-right arrow"></i>
+            </div>
+            <div class="submenu" id="sub-admin">
                 <a class="nav-link" href="{{ url_for('bitacora.ver_bitacora') }}">
                     <i class="fas fa-clipboard-list"></i> Bitácora del Sistema
                 </a>
@@ -232,6 +339,7 @@
                 </a>
             </div>
             {% endif %}
+
         </nav>
     </div>
     {% endif %}
@@ -296,31 +404,25 @@
     
     <script>
         // ===== FORMATEO DE NÚMEROS CON SEPARADOR DE MILES =====
-        // Formatear número con separador de miles (punto)
         function formatearMiles(numero) {
             if (!numero && numero !== 0) return '';
             return numero.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
         }
         
-        // Limpiar formato para obtener número puro
         function limpiarMiles(valor) {
             if (!valor) return '';
             return valor.toString().replace(/\./g, '');
         }
         
-        // Aplicar formateo automático a inputs numéricos
         function aplicarFormatoMiles(input) {
             $(input).on('input', function() {
                 let valor = $(this).val();
-                // Remover todo excepto números
                 valor = limpiarMiles(valor);
-                // Formatear con separador de miles
                 if (valor) {
                     $(this).val(formatearMiles(valor));
                 }
             });
             
-            // Al enviar formulario, limpiar formato para enviar valor numérico puro
             $(input).closest('form').on('submit', function() {
                 let valor = $(input).val();
                 $(input).val(limpiarMiles(valor));
@@ -328,36 +430,30 @@
         }
         
         $(document).ready(function() {
-            // Sidebar toggle para móvil
             $('#sidebarToggle').click(function() {
                 $('#sidebar').toggleClass('active');
             });
             
-            // Auto-cerrar alertas después de 5 segundos
             setTimeout(function() {
                 $('.alert').fadeOut('slow');
             }, 5000);
             
-            // Aplicar formato de miles a todos los inputs de tipo number, precio, monto, cantidad, stock, etc.
             let $inputs = $('input[type="number"], input[name*="precio"], input[name*="monto"], input[name*="total"], input[name*="subtotal"], input[name*="cantidad"], input[name*="stock"], input[name*="descuento"]');
             $inputs = $inputs.not('.no-format').not('[name*="porcentaje"]').not('[name*="iva"]');
             
             $inputs.each(function() {
-                // Cambiar tipo a text para permitir puntos
                 if ($(this).attr('type') === 'number') {
                     $(this).attr('type', 'text');
                     $(this).attr('inputmode', 'numeric');
                 }
                 aplicarFormatoMiles(this);
                 
-                // Si ya tiene valor, formatearlo
                 let valorActual = $(this).val();
                 if (valorActual && !isNaN(limpiarMiles(valorActual))) {
                     $(this).val(formatearMiles(limpiarMiles(valorActual)));
                 }
             });
             
-            // Formatear todos los elementos que muestren montos (spans, divs con clase monto, precio, etc.)
             $('.monto, .precio, .total, .subtotal, [data-monto], [data-precio]').each(function() {
                 let valor = $(this).text().trim();
                 let numero = limpiarMiles(valor);
@@ -367,7 +463,6 @@
             });
         });
         
-        // Función global para formatear montos en JavaScript dinámicamente
         window.formatearMoneda = function(numero, simbolo = '') {
             if (!numero && numero !== 0) return simbolo + '0';
             return simbolo + formatearMiles(Math.round(numero));
@@ -375,5 +470,38 @@
     </script>
     
     {% block extra_js %}{% endblock %}
+
+    <script>
+    // ===== ACCORDION SIDEBAR =====
+    $(document).ready(function() {
+        $('.module-header').on('click', function() {
+            var targetId = $(this).data('target');
+            var $submenu = $('#' + targetId);
+            var isOpen = $(this).hasClass('open');
+
+            // Cerrar todos (accordion: solo uno abierto a la vez)
+            $('.module-header').removeClass('open');
+            $('.submenu').removeClass('show');
+
+            // Si no estaba abierto, abrirlo
+            if (!isOpen) {
+                $(this).addClass('open');
+                $submenu.addClass('show');
+            }
+        });
+
+        // Abrir automáticamente el módulo que contiene el link activo
+        var currentPath = window.location.pathname + window.location.search;
+        $('.submenu .nav-link').each(function() {
+            var href = $(this).attr('href');
+            if (href && currentPath.indexOf(href.split('?')[0]) === 0) {
+                $(this).addClass('active');
+                var $submenu = $(this).closest('.submenu');
+                $submenu.addClass('show');
+                $submenu.prev('.module-header').addClass('open');
+            }
+        });
+    });
+    </script>
 </body>
 </html>

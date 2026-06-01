@@ -101,3 +101,19 @@
     </div>
 </div>
 {% endblock %}
+
+{% block extra_js %}
+<script>
+// Activar tab según query param ?tab=credito o ?tab=debito
+$(document).ready(function() {
+    var params = new URLSearchParams(window.location.search);
+    var tab = params.get('tab');
+    if (tab === 'debito') {
+        $('#tab-nc').removeClass('active');
+        $('#nc').removeClass('show active');
+        $('#tab-nd').addClass('active');
+        $('#nd').addClass('show active');
+    }
+});
+</script>
+{% endblock %}

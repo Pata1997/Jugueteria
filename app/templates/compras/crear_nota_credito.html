@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Emitir Nota de Crédito de Compra</h2>
+    <form method="post">
+        <div class="mb-3">
+            <label class="form-label">Compra Asociada</label>
+            <input type="text" class="form-control" value="{{ compra.numero_compra }}" readonly>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Proveedor</label>
+            <input type="text" class="form-control" value="{{ compra.proveedor.razon_social }}" readonly>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Motivo *</label>
+            <input type="text" class="form-control" name="motivo" required maxlength="200" placeholder="Ej: Devolución de mercadería, descuento por volumen...">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Monto (Gs) *</label>
+            <input type="text" class="form-control" name="monto" required>
+            <small class="text-muted">Este monto reducirá el saldo de la Cuenta por Pagar asociada a esta compra.</small>
+        </div>
+        <button type="submit" class="btn btn-primary">Emitir Nota de Crédito</button>
+        <a href="{{ url_for('compras.ver', id=compra.id) }}" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle de Presupuesto - {{ presupuesto.numero_presupuesto }}{% endblock %}
+{% block page_title %}Presupuesto {{ presupuesto.numero_presupuesto }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-file-invoice-dollar"></i> Presupuesto de Proveedor</span>
+                {% if presupuesto.estado == 'pendiente' %}
+                    <span class="badge bg-warning">Pendiente</span>
+                {% elif presupuesto.estado == 'seleccionado' %}
+                    <span class="badge bg-success">Comprado</span>
+                {% else %}
+                    <span class="badge bg-secondary">{{ presupuesto.estado|upper }}</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">DATOS DEL PROVEEDOR</h6>
+                        <strong>{{ presupuesto.proveedor.razon_social }}</strong><br>
+                        RUC: {{ presupuesto.proveedor.ruc }}<br>
+                        Tel: {{ presupuesto.proveedor.telefono or 'No registrado' }}
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <h6 class="text-muted">DATOS DEL PRESUPUESTO</h6>
+                        <strong>Nº: {{ presupuesto.numero_presupuesto }}</strong><br>
+                        Fecha: {{ presupuesto.fecha_recepcion.strftime('%d/%m/%Y') }}<br>
+                        Validez: {{ presupuesto.fecha_validez.strftime('%d/%m/%Y') if presupuesto.fecha_validez else 'No especificada' }}
+                    </div>
+                </div>
+
+                {% if presupuesto.detalles.count() > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Código</th>
+                                <th>Producto</th>
+                                <th class="text-end">Cant.</th>
+                                <th class="text-end">Precio U.</th>
+                                <th class="text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for det in presupuesto.detalles %}
+                            <tr>
+                                <td>{{ det.producto.codigo if det.producto else '' }}</td>
+                                <td>{{ det.producto.nombre if det.producto else 'ID: ' ~ det.producto_id }}</td>
+                                <td class="text-end">{{ det.cantidad }}</td>
+                                <td class="text-end">Gs. {{ "{:,.0f}".format(det.precio_unitario|float) }}</td>
+                                <td class="text-end fw-bold">Gs. {{ "{:,.0f}".format(det.subtotal|float) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="4" class="text-end fw-bold">TOTAL:</td>
+                                <td class="text-end fw-bold fs-5 text-primary">Gs. {{ "{:,.0f}".format(presupuesto.total|float) }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                    <div class="alert alert-info">Solo totales registrados (Sin detalle de productos)</div>
+                    <h4 class="text-end mt-3 text-primary">Total: Gs. {{ "{:,.0f}".format(presupuesto.total|float) }}</h4>
+                {% endif %}
+                
+                {% if presupuesto.observaciones %}
+                <div class="mt-3">
+                    <strong>Observaciones:</strong>
+                    <p class="mb-0 bg-light p-2 rounded">{{ presupuesto.observaciones }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-3">
+            <div class="card-header bg-light">
+                <i class="fas fa-cogs"></i> Acciones
+            </div>
+            <div class="card-body">
+                {% if presupuesto.estado == 'pendiente' %}
+                <form method="POST" action="{{ url_for('compras.convertir_presupuesto_a_compra', id=presupuesto.id) }}" class="mb-2">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-shopping-cart"></i> Convertir en Compra
+                    </button>
+                </form>
+                
+                <a href="{{ url_for('compras.editar_presupuesto_independiente', id=presupuesto.id) }}" class="btn btn-warning w-100 mb-2">
+                    <i class="fas fa-edit"></i> Editar Presupuesto
+                </a>
+                {% elif presupuesto.estado == 'seleccionado' %}
+                <div class="alert alert-success text-center">
+                    <i class="fas fa-check-circle fs-4 mb-2"></i><br>
+                    Este presupuesto ya fue convertido en compra.
+                </div>
+                {% endif %}
+                
+                <a href="{{ url_for('compras.presupuestos_lista') }}" class="btn btn-secondary w-100 mt-2">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+
+{% block title %}Registrar Presupuesto de Proveedor{% endblock %}
+{% block page_title %}Registrar Presupuesto de Proveedor{% endblock %}
+
+{% block content %}
+<form method="POST" id="formPresupuesto" action="{{ url_for('compras.crear_presupuesto_independiente') }}">
+    <div class="row">
+        <!-- Columna Izquierda: Datos del Presupuesto -->
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-file-invoice"></i> Datos del Presupuesto
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label text-primary"><i class="fas fa-truck"></i> Proveedor (*)</label>
+                        <input type="text" class="form-control" id="proveedor_buscar" placeholder="Escribe nombre o RUC..." autocomplete="off">
+                        <input type="hidden" id="proveedor_id" name="proveedor_id" required>
+                        <div id="proveedor_sugerencias" class="list-group mt-1 position-absolute shadow" style="max-height: 200px; overflow-y: auto; z-index: 1000; width: 90%;"></div>
+                        <small id="proveedor_seleccionado" class="text-muted d-block mt-1"></small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fas fa-calendar-alt"></i> Fecha de Validez</label>
+                        <input type="date" name="fecha_validez" class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fas fa-clock"></i> Tiempo Entrega (días)</label>
+                        <input type="number" name="dias_entrega" class="form-control" min="0">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fas fa-handshake"></i> Condiciones de Pago</label>
+                        <input type="text" name="condiciones_pago" class="form-control" placeholder="Ej: Contado, Crédito 30 días">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fas fa-comment-alt"></i> Observaciones</label>
+                        <textarea name="observaciones" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-body bg-light">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <strong id="resumen_subtotal">Gs. 0</strong>
+                        <input type="hidden" id="input_subtotal" name="subtotal" value="0">
+                    </div>
+                    <div class="d-flex justify-content-between mb-2 text-danger">
+                        <span>IVA (10% inc):</span>
+                        <strong id="resumen_iva">Gs. 0</strong>
+                        <input type="hidden" id="input_iva" name="iva" value="0">
+                    </div>
+                    <div class="d-flex justify-content-between mb-2 fs-5">
+                        <span class="fw-bold">TOTAL:</span>
+                        <strong class="text-primary" id="resumen_total">Gs. 0</strong>
+                        <input type="hidden" id="input_total" name="total" value="0">
+                    </div>
+                    
+                    <input type="hidden" id="detalles_json" name="detalles_json" value="[]">
+                    
+                    <button type="submit" class="btn btn-primary w-100 mt-3" onclick="return prepararEnvio()">
+                        <i class="fas fa-save"></i> Guardar Presupuesto
+                    </button>
+                    <a href="{{ url_for('compras.presupuestos_lista') }}" class="btn btn-secondary w-100 mt-2">Cancelar</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Detalles -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <i class="fas fa-list"></i> Detalle de Productos
+                </div>
+                <div class="card-body">
+                    <!-- Buscador de Productos -->
+                    <div class="row mb-3">
+                        <div class="col-md-5" style="position: relative;">
+                            <label class="form-label small">Buscar Producto</label>
+                            <input type="hidden" id="producto_id" value="">
+                            <input type="hidden" id="producto_codigo" value="">
+                            <input type="hidden" id="producto_nombre" value="">
+                            <input type="text" class="form-control" id="producto_buscar" placeholder="Buscar por código o nombre..." autocomplete="off">
+                            <div class="list-group mt-1 position-absolute w-100 shadow" id="producto_sugerencias" style="max-height: 180px; overflow-y:auto; z-index: 1000; top: 100%;"></div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">Cantidad</label>
+                            <input type="number" id="prod_cantidad" class="form-control" value="1" min="1">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Precio U. (Gs)</label>
+                            <input type="number" id="prod_precio" class="form-control" min="0">
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="button" class="btn btn-success w-100" onclick="agregarProducto()">
+                                <i class="fas fa-plus"></i> Agregar
+                            </button>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="table-responsive" style="min-height: 250px;">
+                        <table class="table table-sm table-bordered table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Descripción</th>
+                                    <th class="text-end">Cant.</th>
+                                    <th class="text-end">Precio U.</th>
+                                    <th class="text-end">Subtotal</th>
+                                    <th class="text-center"><i class="fas fa-trash"></i></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaDetalles">
+                                <!-- Filas por JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+    let detalles = [];
+    let proveedorSeleccionado = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const inputProv = document.getElementById('proveedor_buscar');
+        inputProv.addEventListener('input', debounce(buscarProveedores, 250));
+        inputProv.addEventListener('focus', () => { if (inputProv.value) buscarProveedores(); });
+
+        const inputProd = document.getElementById('producto_buscar');
+        inputProd.addEventListener('input', debounce(buscarProductos, 250));
+        inputProd.addEventListener('focus', () => { if (inputProd.value) buscarProductos(); });
+    });
+
+    // --- PROVEEDORES ---
+    function buscarProveedores() {
+        const term = document.getElementById('proveedor_buscar').value.trim();
+        const lista = document.getElementById('proveedor_sugerencias');
+        lista.innerHTML = '';
+        if (!term || term.length < 2) { return; }
+        fetch(`{{ url_for('compras.api_proveedores') }}?term=${encodeURIComponent(term)}`)
+            .then(r => r.json())
+            .then(items => {
+                if (!Array.isArray(items) || items.length === 0) { return; }
+                items.forEach(p => {
+                    const a = document.createElement('a');
+                    a.href = '#';
+                    a.className = 'list-group-item list-group-item-action';
+                    a.innerHTML = `<strong>${p.razon_social}</strong><br><small>RUC: ${p.ruc}</small>`;
+                    a.addEventListener('click', (ev) => {
+                        ev.preventDefault();
+                        seleccionarProveedor(p);
+                    });
+                    lista.appendChild(a);
+                });
+            })
+            .catch(e => console.error('Error buscando proveedores:', e));
+    }
+
+    function seleccionarProveedor(p) {
+        proveedorSeleccionado = p;
+        document.getElementById('proveedor_id').value = p.id;
+        document.getElementById('proveedor_buscar').value = p.razon_social;
+        document.getElementById('proveedor_sugerencias').innerHTML = '';
+        document.getElementById('proveedor_seleccionado').textContent = `Seleccionado: ${p.razon_social} (RUC: ${p.ruc})`;
+    }
+
+    // --- PRODUCTOS ---
+    function buscarProductos() {
+        const term = document.getElementById('producto_buscar').value.trim();
+        const lista = document.getElementById('producto_sugerencias');
+        lista.innerHTML = '';
+        if (!term || term.length < 2) return;
+        fetch(`{{ url_for('productos.buscar') }}?term=${encodeURIComponent(term)}`)
+            .then(r => r.json())
+            .then(items => {
+                if (!Array.isArray(items) || items.length === 0) return;
+                items.forEach(p => {
+                    const a = document.createElement('a');
+                    a.href = '#';
+                    a.className = 'list-group-item list-group-item-action';
+                    a.innerHTML = `<strong>${p.codigo}</strong> - ${p.value}<br><small>Stock: ${p.stock_actual} | Precio Compra: Gs. ${p.precio_compra}</small>`;
+                    a.addEventListener('click', (ev) => {
+                        ev.preventDefault();
+                        seleccionarProducto(p);
+                    });
+                    lista.appendChild(a);
+                });
+            })
+            .catch(e => console.error('Error buscando productos:', e));
+    }
+
+    function seleccionarProducto(p) {
+        document.getElementById('producto_id').value = p.id;
+        document.getElementById('producto_codigo').value = p.codigo;
+        document.getElementById('producto_nombre').value = p.value;
+        document.getElementById('producto_buscar').value = `${p.codigo} - ${p.value}`;
+        document.getElementById('prod_precio').value = p.precio_compra || 0;
+        document.getElementById('producto_sugerencias').innerHTML = '';
+        document.getElementById('prod_cantidad').focus();
+    }
+
+    // --- DETALLES ---
+    function agregarProducto() {
+        const prodId = document.getElementById('producto_id').value;
+        const prodCodigo = document.getElementById('producto_codigo').value;
+        const prodNombre = document.getElementById('producto_nombre').value;
+        
+        if (!prodId) {
+            alert('Seleccione un producto de la lista');
+            return;
+        }
+
+        const cantidad = parseFloat(document.getElementById('prod_cantidad').value) || 0;
+        const precio = parseFloat(document.getElementById('prod_precio').value) || 0;
+        
+        if (cantidad <= 0 || precio <= 0) {
+            alert('Cantidad y precio deben ser mayores a 0');
+            return;
+        }
+
+        const subtotal = cantidad * precio;
+
+        detalles.push({
+            producto_id: prodId,
+            codigo: prodCodigo,
+            nombre: prodNombre,
+            cantidad: cantidad,
+            precio_unitario: precio,
+            subtotal: subtotal
+        });
+
+        // Limpiar
+        document.getElementById('producto_id').value = '';
+        document.getElementById('producto_codigo').value = '';
+        document.getElementById('producto_nombre').value = '';
+        document.getElementById('producto_buscar').value = '';
+        document.getElementById('prod_cantidad').value = '1';
+        document.getElementById('prod_precio').value = '';
+
+        renderizarTabla();
+    }
+
+    function eliminarFila(index) {
+        detalles.splice(index, 1);
+        renderizarTabla();
+    }
+
+    function renderizarTabla() {
+        const tbody = document.getElementById('tablaDetalles');
+        tbody.innerHTML = '';
+        
+        let total = 0;
+
+        detalles.forEach((det, index) => {
+            total += det.subtotal;
+            
+            tbody.innerHTML += `
+                <tr>
+                    <td>${det.codigo}</td>
+                    <td>${det.nombre}</td>
+                    <td class="text-end">${det.cantidad}</td>
+                    <td class="text-end">${det.precio_unitario.toLocaleString('es-PY')}</td>
+                    <td class="text-end fw-bold">${det.subtotal.toLocaleString('es-PY')}</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-danger btn-sm" onclick="eliminarFila(${index})">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        actualizarTotales(total);
+    }
+
+    function actualizarTotales(total) {
+        const iva = Math.round(total / 11);
+        
+        document.getElementById('resumen_subtotal').innerText = 'Gs. ' + total.toLocaleString('es-PY');
+        document.getElementById('resumen_iva').innerText = 'Gs. ' + iva.toLocaleString('es-PY');
+        document.getElementById('resumen_total').innerText = 'Gs. ' + total.toLocaleString('es-PY');
+        
+        document.getElementById('input_subtotal').value = total;
+        document.getElementById('input_iva').value = iva;
+        document.getElementById('input_total').value = total;
+    }
+
+    function prepararEnvio() {
+        if (detalles.length === 0) {
+            alert('Debe agregar al menos un producto al presupuesto');
+            return false;
+        }
+        
+        document.getElementById('detalles_json').value = JSON.stringify(detalles);
+        return true;
+    }
+
+    function debounce(fn, delay) {
+        let t;
+        return function(...args) {
+            clearTimeout(t);
+            t = setTimeout(() => fn.apply(this, args), delay);
+        };
+    }
+</script>
+{% endblock %}

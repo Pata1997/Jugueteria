@@ -274,6 +274,34 @@ def crear_solicitud():
     tipos = TipoServicio.query.filter_by(activo=True).all()
     return render_template('servicios/crear_solicitud.html', clientes=clientes, tipos=tipos, tipos_servicio=tipos)
 
+@bp.route('/solicitudes/<int:id>/imprimir-presupuesto')
+@login_required
+def imprimir_presupuesto_solicitud(id):
+    solicitud = SolicitudServicio.query.get_or_404(id)
+    tipos_servicio = {t.id: t for t in TipoServicio.query.all()}
+    productos = {p.id: p for p in Producto.query.all()}
+    
+    lineas = []
+    if solicitud.observaciones and '[LÍNEAS]' in solicitud.observaciones:
+        try:
+            import json
+            partes = solicitud.observaciones.split('[LÍNEAS]')
+            if len(partes) > 1:
+                lineas_json_str = partes[1].strip()
+                lineas = json.loads(lineas_json_str)
+        except:
+            pass
+            
+    from app.models import ConfiguracionEmpresa
+    empresa = ConfiguracionEmpresa.query.first()
+            
+    return render_template('servicios/imprimir_presupuesto_solicitud.html',
+                          solicitud=solicitud,
+                          tipos_servicio=tipos_servicio,
+                          productos=productos,
+                          lineas=lineas,
+                          empresa=empresa)
+
 @bp.route('/solicitudes/<int:id>')
 @login_required
 def ver_solicitud(id):

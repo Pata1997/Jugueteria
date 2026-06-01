@@ -216,9 +216,9 @@ def listar():
     )
     
     # Totales para el pie de tabla
-    total_ventas = sum(Decimal(v.total or 0) for v in ventas.items)
-    total_pagado = sum(Decimal(getattr(v, 'monto_pagado', 0) or 0) for v in ventas.items)
-    total_saldo = sum(Decimal(getattr(v, 'saldo_pendiente', 0) or 0) for v in ventas.items)
+    total_ventas = sum(Decimal(v.total or 0) for v in ventas.items if v.estado != 'anulada')
+    total_pagado = sum(Decimal(getattr(v, 'monto_pagado', 0) or 0) for v in ventas.items if v.estado != 'anulada')
+    total_saldo = sum(Decimal(getattr(v, 'saldo_pendiente', 0) or 0) for v in ventas.items if v.estado != 'anulada')
     
     return render_template(
         'ventas/listar.html',

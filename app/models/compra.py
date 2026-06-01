@@ -67,7 +67,7 @@ class PresupuestoProveedor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     numero_presupuesto = db.Column(db.String(50), unique=True, nullable=False)
     fecha_recepcion = db.Column(db.DateTime, default=datetime.utcnow)
-    pedido_id = db.Column(db.Integer, db.ForeignKey('pedidos_compra.id'), nullable=False)
+    pedido_id = db.Column(db.Integer, db.ForeignKey('pedidos_compra.id'), nullable=True)
     proveedor_id = db.Column(db.Integer, db.ForeignKey('proveedores.id'), nullable=False)
     subtotal = db.Column(db.Numeric(12, 2), default=0)
     iva = db.Column(db.Numeric(12, 2), default=0)

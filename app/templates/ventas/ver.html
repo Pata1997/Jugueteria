@@ -198,10 +198,14 @@
                 <button class="btn btn-warning w-100 mb-2" data-bs-toggle="modal" data-bs-target="#modalNotaCredito">
                     <i class="fas fa-file-alt"></i> Nota de Crédito
                 </button>
+                {% endif %}
                 
-                <button class="btn btn-danger w-100" onclick="if(confirm('¿Anular esta venta?')) window.location.href='{{ url_for('ventas.anular', id=venta.id) }}'">
-                    <i class="fas fa-ban"></i> Anular Venta
-                </button>
+                {% if venta.estado_pago == 'pendiente' and venta.estado != 'anulada' %}
+                <form method="POST" action="{{ url_for('ventas.anular', id=venta.id) }}" onsubmit="return confirm('¿Cancelar esta venta?');">
+                    <button type="submit" class="btn btn-danger w-100">
+                        <i class="fas fa-ban"></i> Cancelar Venta
+                    </button>
+                </form>
                 {% endif %}
                 
                 <hr>

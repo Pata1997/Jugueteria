@@ -15,12 +15,23 @@
                     <a href="{{ url_for('compras.pendientes_pago') }}" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left"></i> Volver
                     </a>
+                    <a href="{{ url_for('compras.crear_nota_credito_compra', compra_id=compra.id) }}" class="btn btn-outline-info ms-2">
+                        <i class="fas fa-minus-circle"></i> Nota de Crédito
+                    </a>
+                    <a href="{{ url_for('compras.crear_nota_debito_compra', compra_id=compra.id) }}" class="btn btn-outline-danger ms-2">
+                        <i class="fas fa-plus-circle"></i> Nota de Débito
+                    </a>
                     {# Mostrar botón Pagar solo si NO es a crédito (sin cuenta por pagar pendiente/parcial) #}
                     {% if not cuenta or cuenta.estado == 'pagada' %}
                         {% if compra.estado == 'registrada' %}
                         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalPagar">
                             <i class="fas fa-money-bill-wave"></i> Pagar
                         </button>
+                        <form method="POST" action="{{ url_for('compras.cancelar_compra', id=compra.id) }}" class="d-inline ms-2" onsubmit="return confirm('¿Cancelar esta compra?');">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-ban"></i> Cancelar Compra
+                            </button>
+                        </form>
                         {% endif %}
                     {% endif %}
                 </div>

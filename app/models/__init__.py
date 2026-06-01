@@ -23,6 +23,9 @@ from app.models.compra import (
 )
 from app.models.configuracion import ConfiguracionEmpresa
 
+from app.models.nota_credito_compra import NotaCreditoCompra, NotaCreditoCompraDetalle
+from app.models.nota_debito_compra import NotaDebitoCompra, NotaDebitoCompraDetalle
+
 __all__ = [
     'Usuario',
     'Cliente',
@@ -34,6 +37,7 @@ __all__ = [
     'Proveedor', 'PedidoCompra', 'PedidoCompraDetalle', 'PresupuestoProveedor',
     'PresupuestoProveedorDetalle', 'OrdenCompra', 'OrdenCompraDetalle',
     'Compra', 'CompraDetalle', 'CuentaPorPagar', 'PagoProveedor', 'PagoCompra', 'MovimientoCaja',
+    'NotaCreditoCompra', 'NotaCreditoCompraDetalle', 'NotaDebitoCompra', 'NotaDebitoCompraDetalle',
     'ConfiguracionEmpresa',
     'Bitacora'
 ]

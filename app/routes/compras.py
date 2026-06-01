@@ -4,7 +4,7 @@ from flask_login import login_required, current_user
 from app.utils.roles import require_roles
 from app import db
 from app.models import (Proveedor, PedidoCompra, PedidoCompraDetalle,
-                        PresupuestoProveedor, OrdenCompra, Compra, CompraDetalle,
+                        PresupuestoProveedor, PresupuestoProveedorDetalle, OrdenCompra, Compra, CompraDetalle,
                         CuentaPorPagar, PagoProveedor, Producto, PagoCompra, 
                         MovimientoCaja, AperturaCaja, MovimientoProducto, HistorialPrecio)
 from app.utils import registrar_bitacora
@@ -486,7 +486,17 @@ def registrar_compra():
             traceback.print_exc()
     
     proveedores = Proveedor.query.filter_by(activo=True).all()
-    return render_template('compras/registrar_compra.html', proveedores=proveedores)
+    
+    # Soporte para precargar desde presupuesto
+    presupuesto = None
+    presupuesto_id = request.args.get('presupuesto_id', type=int)
+    if presupuesto_id:
+        from app.models.compra import PresupuestoProveedor
+        presupuesto = PresupuestoProveedor.query.get(presupuesto_id)
+        
+    return render_template('compras/registrar_compra.html', 
+                         proveedores=proveedores, 
+                         presupuesto=presupuesto)
 
 
 @bp.route('/pendientes-pago')
@@ -518,11 +528,188 @@ def get_caja_abierta():
     apertura = AperturaCaja.query.filter_by(estado='abierto').first()
     if apertura:
         return jsonify({
+            'success': True,
             'id': apertura.id,
-            'numero_caja': apertura.caja.numero_caja,
-            'monto_inicial': float(apertura.monto_inicial or 0)
+            'saldo_actual': float(apertura.saldo_actual)
         })
-    return jsonify({'error': 'No hay caja abierta'}), 404
+    return jsonify({'success': False, 'message': 'No hay caja abierta'})
+
+# ===== PRESUPUESTOS INDEPENDIENTES =====
+@bp.route('/presupuestos')
+@login_required
+def presupuestos_lista():
+    page = request.args.get('page', 1, type=int)
+    presupuestos = PresupuestoProveedor.query.order_by(PresupuestoProveedor.fecha_recepcion.desc()).paginate(
+        page=page, per_page=20, error_out=False
+    )
+    return render_template('compras/presupuestos.html', presupuestos=presupuestos)
+
+@bp.route('/presupuestos/nuevo', methods=['GET', 'POST'])
+@login_required
+def crear_presupuesto_independiente():
+    if request.method == 'POST':
+        try:
+            ultimo = PresupuestoProveedor.query.order_by(PresupuestoProveedor.id.desc()).first()
+            numero = f"PRES-PROV-{(ultimo.id + 1 if ultimo else 1):06d}"
+            
+            presupuesto = PresupuestoProveedor(
+                numero_presupuesto=numero,
+                proveedor_id=request.form.get('proveedor_id'),
+                pedido_id=None,
+                subtotal=request.form.get('subtotal', 0),
+                iva=request.form.get('iva', 0),
+                total=request.form.get('total', 0),
+                dias_entrega=request.form.get('dias_entrega'),
+                condiciones_pago=request.form.get('condiciones_pago'),
+                fecha_validez=request.form.get('fecha_validez') or None,
+                observaciones=request.form.get('observaciones'),
+                estado='pendiente'
+            )
+            db.session.add(presupuesto)
+            
+            detalles_json = request.form.get('detalles_json')
+            if detalles_json:
+                import json
+                detalles = json.loads(detalles_json)
+                for det in detalles:
+                    detalle = PresupuestoProveedorDetalle(
+                        presupuesto=presupuesto,
+                        producto_id=det.get('producto_id'),
+                        cantidad=det.get('cantidad', 1),
+                        precio_unitario=det.get('precio_unitario', 0),
+                        subtotal=det.get('subtotal', 0)
+                    )
+                    db.session.add(detalle)
+                    
+            db.session.commit()
+            flash('Presupuesto registrado correctamente', 'success')
+            return redirect(url_for('compras.ver_presupuesto_independiente', id=presupuesto.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error: {str(e)}', 'danger')
+            
+    proveedores = Proveedor.query.filter_by(activo=True).all()
+    from app.models.producto import Producto
+    productos = Producto.query.filter_by(activo=True).all()
+    return render_template('compras/crear_presupuesto_independiente.html', proveedores=proveedores, productos=productos)
+
+@bp.route('/presupuestos/ver/<int:id>')
+@login_required
+def ver_presupuesto_independiente(id):
+    presupuesto = PresupuestoProveedor.query.get_or_404(id)
+    return render_template('compras/ver_presupuesto_independiente.html', presupuesto=presupuesto)
+
+@bp.route('/presupuestos/<int:id>/editar', methods=['GET', 'POST'])
+@login_required
+def editar_presupuesto_independiente(id):
+    presupuesto = PresupuestoProveedor.query.get_or_404(id)
+    if request.method == 'POST':
+        try:
+            presupuesto.proveedor_id = request.form.get('proveedor_id')
+            presupuesto.subtotal = request.form.get('subtotal', 0)
+            presupuesto.iva = request.form.get('iva', 0)
+            presupuesto.total = request.form.get('total', 0)
+            presupuesto.dias_entrega = request.form.get('dias_entrega')
+            presupuesto.condiciones_pago = request.form.get('condiciones_pago')
+            presupuesto.fecha_validez = request.form.get('fecha_validez') or None
+            presupuesto.observaciones = request.form.get('observaciones')
+            
+            detalles_json = request.form.get('detalles_json')
+            if detalles_json:
+                import json
+                detalles = json.loads(detalles_json)
+                PresupuestoProveedorDetalle.query.filter_by(presupuesto_id=presupuesto.id).delete()
+                for det in detalles:
+                    detalle = PresupuestoProveedorDetalle(
+                        presupuesto=presupuesto,
+                        producto_id=det.get('producto_id'),
+                        cantidad=det.get('cantidad', 1),
+                        precio_unitario=det.get('precio_unitario', 0),
+                        subtotal=det.get('subtotal', 0)
+                    )
+                    db.session.add(detalle)
+                    
+            db.session.commit()
+            flash('Presupuesto actualizado correctamente', 'success')
+            return redirect(url_for('compras.ver_presupuesto_independiente', id=presupuesto.id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error: {str(e)}', 'danger')
+            
+    proveedores = Proveedor.query.filter_by(activo=True).all()
+    from app.models.producto import Producto
+    productos = Producto.query.filter_by(activo=True).all()
+    
+    detalles_existentes = []
+    for d in presupuesto.detalles:
+        detalles_existentes.append({
+            'producto_id': d.producto_id,
+            'codigo': d.producto.codigo if d.producto else '',
+            'nombre': d.producto.nombre if d.producto else '',
+            'cantidad': float(d.cantidad),
+            'precio_unitario': float(d.precio_unitario),
+            'subtotal': float(d.subtotal)
+        })
+    import json
+    detalles_json_str = json.dumps(detalles_existentes)
+    
+    return render_template('compras/editar_presupuesto_independiente.html', 
+                           presupuesto=presupuesto, 
+                           proveedores=proveedores,
+                           productos=productos,
+                           detalles_json_str=detalles_json_str)
+
+@bp.route('/presupuestos/<int:id>/convertir', methods=['POST'])
+@login_required
+def convertir_presupuesto_a_compra(id):
+    presupuesto = PresupuestoProveedor.query.get_or_404(id)
+    
+    try:
+        # Generar número de compra
+        ultimo = Compra.query.filter(Compra.numero_compra.isnot(None)).order_by(Compra.id.desc()).first()
+        numero = f"C-{(ultimo.id + 1 if ultimo else 1):06d}"
+        
+        # Crear compra automáticamente
+        compra = Compra(
+            numero_compra=numero,
+            proveedor_id=presupuesto.proveedor_id,
+            tipo='producto',
+            descripcion=f"Compra generada automáticamente a partir del presupuesto {presupuesto.numero_presupuesto}",
+            estado='registrada',
+            usuario_registra_id=current_user.id,
+            fecha_compra=datetime.utcnow(),
+            subtotal=presupuesto.subtotal,
+            iva=presupuesto.iva,
+            total=presupuesto.total,
+            stock_actualizado=False
+        )
+        
+        db.session.add(compra)
+        
+        # Copiar detalles
+        for det in presupuesto.detalles:
+            detalle = CompraDetalle(
+                compra=compra,
+                producto_id=det.producto_id,
+                cantidad=det.cantidad,
+                precio_unitario=det.precio_unitario,
+                subtotal=det.subtotal,
+                concepto=det.producto.nombre if det.producto else ''
+            )
+            db.session.add(detalle)
+        
+        presupuesto.estado = 'seleccionado'
+        db.session.add(presupuesto)
+        db.session.commit()
+        
+        flash('Compra registrada automáticamente desde el presupuesto.', 'success')
+        return redirect(url_for('compras.pendientes_pago'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al convertir presupuesto: {str(e)}', 'danger')
+        return redirect(url_for('compras.ver_presupuesto_independiente', id=presupuesto.id))
 
 
 @bp.route('/<int:id>/pagar', methods=['POST'])
@@ -775,3 +962,163 @@ def get_compra_api(id):
         'estado': compra.estado
     })
 
+
+# ===== NOTAS DE CRÉDITO Y DÉBITO =====
+from app.models.nota_credito_compra import NotaCreditoCompra, NotaCreditoCompraDetalle
+from app.models.nota_debito_compra import NotaDebitoCompra, NotaDebitoCompraDetalle
+
+@bp.route('/notas')
+@login_required
+def listar_nc_nd_compras():
+    page = request.args.get('page', 1, type=int)
+    tab = request.args.get('tab', 'credito')
+    
+    if tab == 'credito':
+        notas = NotaCreditoCompra.query.order_by(NotaCreditoCompra.fecha_emision.desc()).paginate(
+            page=page, per_page=20, error_out=False
+        )
+    else:
+        notas = NotaDebitoCompra.query.order_by(NotaDebitoCompra.fecha_emision.desc()).paginate(
+            page=page, per_page=20, error_out=False
+        )
+        
+    return render_template('compras/listar_nc_nd.html', notas=notas, tab=tab)
+@bp.route('/<int:compra_id>/nota-credito', methods=['GET', 'POST'])
+@login_required
+def crear_nota_credito_compra(compra_id):
+    compra = Compra.query.get_or_404(compra_id)
+    
+    if request.method == 'POST':
+        try:
+            ultimo = NotaCreditoCompra.query.order_by(NotaCreditoCompra.id.desc()).first()
+            numero = f"NCC-{(ultimo.id + 1 if ultimo else 1):06d}"
+            
+            monto_str = str(request.form.get('monto', '0')).replace(',', '').replace('.', '')
+            if not monto_str: monto_str = '0'
+            # Note: in Paraguay currency without decimals usually, but if there's decimals adjust logic
+            # Si el input text viene con separador de miles, limpiarlo:
+            import re
+            monto_str = re.sub(r'[^\d.]', '', monto_str)
+            monto = Decimal(monto_str)
+            motivo = request.form.get('motivo')
+            
+            if monto <= 0:
+                flash('El monto debe ser mayor a 0', 'danger')
+                return redirect(url_for('compras.crear_nota_credito_compra', compra_id=compra.id))
+            
+            nota = NotaCreditoCompra(
+                numero_nota=numero,
+                compra_id=compra.id,
+                proveedor_id=compra.proveedor_id,
+                motivo=motivo,
+                monto=monto,
+                usuario_id=current_user.id
+            )
+            db.session.add(nota)
+            
+            # Actualizar Cuenta Por Pagar si existe y está pendiente/parcial
+            cuenta = CuentaPorPagar.query.filter_by(compra_id=compra.id).first()
+            if cuenta:
+                # La Nota de Crédito REDUCE la deuda
+                if cuenta.monto_adeudado > 0:
+                    cuenta.monto_adeudado -= monto
+                    if cuenta.monto_adeudado < 0:
+                        cuenta.monto_adeudado = 0
+                    cuenta.actualizar_estado()
+                    db.session.add(cuenta)
+                    
+            db.session.commit()
+            flash('Nota de Crédito registrada con éxito.', 'success')
+            return redirect(url_for('compras.listar_nc_nd_compras', tab='credito'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al crear Nota de Crédito: {str(e)}', 'danger')
+            
+    return render_template('compras/crear_nota_credito.html', compra=compra)
+
+@bp.route('/<int:compra_id>/nota-debito', methods=['GET', 'POST'])
+@login_required
+def crear_nota_debito_compra(compra_id):
+    compra = Compra.query.get_or_404(compra_id)
+    
+    if request.method == 'POST':
+        try:
+            ultimo = NotaDebitoCompra.query.order_by(NotaDebitoCompra.id.desc()).first()
+            numero = f"NDC-{(ultimo.id + 1 if ultimo else 1):06d}"
+            
+            monto_str = str(request.form.get('monto', '0')).replace(',', '').replace('.', '')
+            import re
+            monto_str = re.sub(r'[^\d.]', '', monto_str)
+            if not monto_str: monto_str = '0'
+            monto = Decimal(monto_str)
+            
+            tipo = request.form.get('tipo')
+            motivo = request.form.get('motivo')
+            
+            if monto <= 0:
+                flash('El monto debe ser mayor a 0', 'danger')
+                return redirect(url_for('compras.crear_nota_debito_compra', compra_id=compra.id))
+            
+            nota = NotaDebitoCompra(
+                numero_nota=numero,
+                compra_id=compra.id,
+                proveedor_id=compra.proveedor_id,
+                tipo=tipo,
+                motivo=motivo,
+                monto=monto,
+                usuario_id=current_user.id
+            )
+            db.session.add(nota)
+            
+            # Actualizar Cuenta Por Pagar si existe
+            cuenta = CuentaPorPagar.query.filter_by(compra_id=compra.id).first()
+            if not cuenta:
+                # Si no existía, la compra estaba pagada, ahora hay que crear una nueva deuda
+                cuenta = CuentaPorPagar(
+                    compra_id=compra.id,
+                    proveedor_id=compra.proveedor_id,
+                    monto_total=monto,
+                    monto_adeudado=monto,
+                    estado='pendiente'
+                )
+                compra.estado = 'parcial_pagada' # Vuelve a estar adeudada
+            else:
+                # La Nota de Débito AUMENTA la deuda
+                cuenta.monto_adeudado += monto
+                cuenta.estado = 'pendiente' if cuenta.monto_adeudado > 0 else 'pagada'
+                
+            db.session.add(cuenta)
+            db.session.add(compra)
+            
+            db.session.commit()
+            flash('Nota de Débito registrada con éxito.', 'success')
+            return redirect(url_for('compras.listar_nc_nd_compras', tab='debito'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error al crear Nota de Débito: {str(e)}', 'danger')
+            
+    return render_template('compras/crear_nota_debito.html', compra=compra)
+
+
+@bp.route('/<int:id>/cancelar', methods=['POST'])
+@login_required
+def cancelar_compra(id):
+    """Cancela una compra que está en estado registrada (sin pagos)"""
+    compra = Compra.query.get_or_404(id)
+    
+    if compra.estado != 'registrada':
+        flash('Solo se pueden cancelar compras registradas que no han sido pagadas. Para compras con pagos utilice Notas de Crédito.', 'danger')
+        return redirect(url_for('compras.ver', id=compra.id))
+        
+    try:
+        compra.estado = 'cancelada'
+        db.session.commit()
+        registrar_bitacora('cancelar_compra', f'Compra {compra.numero_compra} cancelada')
+        flash('Compra cancelada exitosamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error al cancelar la compra: {str(e)}', 'danger')
+        
+    return redirect(url_for('compras.pendientes_pago'))
