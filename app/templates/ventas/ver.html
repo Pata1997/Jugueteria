@@ -188,13 +188,13 @@
                 <i class="fas fa-cogs"></i> Acciones
             </div>
             <div class="card-body">
-                {% if venta.saldo_pendiente > 0 and current_user.rol != 'recepcion' %}
+                {% if venta.saldo_pendiente > 0 and current_user.rol != 'recepcion' and venta.estado != 'anulada' %}
                 <button class="btn btn-success w-100 mb-2" data-bs-toggle="modal" data-bs-target="#modalPago">
                     <i class="fas fa-dollar-sign"></i> Registrar Pago
                 </button>
                 {% endif %}
                 
-                {% if current_user.rol == 'admin' %}
+                {% if current_user.rol == 'admin' and venta.estado != 'anulada' %}
                 <button class="btn btn-warning w-100 mb-2" data-bs-toggle="modal" data-bs-target="#modalNotaCredito">
                     <i class="fas fa-file-alt"></i> Nota de Crédito
                 </button>
