@@ -658,7 +658,7 @@ def registrar_insumo(id):
     
     try:
         producto_id = request.form.get('producto_id')
-        cantidad = float(request.form.get('cantidad'))
+        cantidad = int(float(request.form.get('cantidad')))
         
         producto = Producto.query.get(producto_id)
         

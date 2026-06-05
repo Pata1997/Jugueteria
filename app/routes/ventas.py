@@ -292,7 +292,7 @@ def crear():
                 # Descontar stock si es producto
                 if det.get('producto_id') and det['tipo_item'] == 'producto':
                     producto = Producto.query.get(det['producto_id'])
-                    cantidad = float(det['cantidad'])
+                    cantidad = int(float(det['cantidad']))
                     
                     from app.models import MovimientoProducto
                     producto.stock_actual -= cantidad
@@ -589,7 +589,7 @@ def anular(id):
         for detalle in venta.detalles:
             if detalle.producto_id and detalle.tipo_item == 'producto':
                 producto = Producto.query.get(detalle.producto_id)
-                cantidad = float(detalle.cantidad)
+                cantidad = int(float(detalle.cantidad))
                 
                 from app.models import MovimientoProducto
                 producto.stock_actual += cantidad
