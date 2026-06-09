@@ -104,6 +104,9 @@
                             <td>{{ cuenta.fecha_creacion.strftime('%d/%m/%Y') if cuenta.fecha_creacion else '-' }}</td>
                             <td>
                                 <strong>{{ cuenta.compra.numero_compra if cuenta.compra else 'N/A' }}</strong>
+                                {% if cuenta.compra and (cuenta.compra.notas_credito or cuenta.compra.notas_debito) %}
+                                    <br><span class="badge bg-secondary" title="Incluye ajustes por NC/ND" style="font-size: 0.7em;">Ajustada</span>
+                                {% endif %}
                             </td>
                             <td>{{ cuenta.proveedor.razon_social if cuenta.proveedor else 'N/A' }}</td>
                             <td>Gs. {{ "{:,.0f}".format(cuenta.compra.total if cuenta.compra and cuenta.compra.total else 0) }}</td>

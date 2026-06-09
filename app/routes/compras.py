@@ -318,10 +318,28 @@ def crear_compra():
 def ver(id):
     compra = Compra.query.get_or_404(id)
     cuenta = compra.cuenta_por_pagar
+    
+    # Calcular totales de notas activas
+    total_nc = sum(float(nc.monto) for nc in compra.notas_credito if nc.estado != 'anulada')
+    total_nd = sum(float(nd.monto) for nd in compra.notas_debito if nd.estado != 'anulada')
+    
     pagos_proveedor = cuenta.pagos_proveedor.order_by('fecha_pago').all() if cuenta else []
-    total_abonado = sum(float(p.monto) for p in pagos_proveedor)
-    saldo_pendiente = float(cuenta.monto_adeudado) - total_abonado if cuenta else 0
-    return render_template('compras/ver.html', compra=compra, cuenta=cuenta, pagos_proveedor=pagos_proveedor, total_abonado=total_abonado, saldo_pendiente=saldo_pendiente)
+    total_abonado = float(cuenta.monto_pagado) if cuenta else 0.0
+    
+    # Saldo pendiente real
+    if cuenta:
+        saldo_pendiente = float(cuenta.monto_adeudado) - total_abonado
+    else:
+        saldo_pendiente = float(compra.total) + total_nd - total_nc - total_abonado
+        
+    return render_template('compras/ver.html', 
+                           compra=compra, 
+                           cuenta=cuenta, 
+                           pagos_proveedor=pagos_proveedor, 
+                           total_abonado=total_abonado, 
+                           saldo_pendiente=saldo_pendiente,
+                           total_nc=total_nc,
+                           total_nd=total_nd)
 
 # ===== CUENTAS POR PAGAR =====
 @bp.route('/cuentas-por-pagar')
@@ -854,23 +872,29 @@ def pagar_compra(id):
 
             # Actualizar monto en apertura caja (efectivo disponible)
             apertura.monto_final = disponible - monto
-
-            # Actualizar estado de compra
-            saldo_pendiente = compra.total - monto
-            if saldo_pendiente <= 0:
-                compra.estado = 'pagada'
+            
+            # Actualizar CuentaPorPagar si existe, si no, crearla
+            cuenta = CuentaPorPagar.query.filter_by(compra_id=compra.id).first()
+            if cuenta:
+                cuenta.monto_pagado += monto
+                cuenta.actualizar_estado()
             else:
-                compra.estado = 'parcial_pagada'
-                # Crear CxP por la diferencia
-                cuenta = CuentaPorPagar(
-                    compra_id=compra.id,
-                    proveedor_id=compra.proveedor_id,
-                    monto_total=compra.total,
-                    monto_adeudado=saldo_pendiente,
-                    estado='pendiente'
-                )
-                db.session.add(cuenta)
-
+                saldo_pendiente = compra.total - monto
+                if saldo_pendiente <= 0:
+                    compra.estado = 'pagada'
+                else:
+                    compra.estado = 'parcial_pagada'
+                    cuenta = CuentaPorPagar(
+                        compra_id=compra.id,
+                        proveedor_id=compra.proveedor_id,
+                        monto_total=compra.total,
+                        monto_adeudado=compra.total,
+                        estado='pendiente'
+                    )
+                    cuenta.monto_pagado = monto
+                    cuenta.actualizar_estado()
+                    db.session.add(cuenta)
+            
             db.session.add(pago)
             print(f"DEBUG: pago agregado a sesión, estado compra={compra.estado}", file=sys.stderr, flush=True)
             
@@ -884,21 +908,27 @@ def pagar_compra(id):
                 usuario_paga_id=current_user.id
             )
             
-            # Actualizar estado de compra
-            saldo_pendiente = compra.total - monto
-            if saldo_pendiente <= 0:
-                compra.estado = 'pagada'
+            # Actualizar CuentaPorPagar si existe, si no, crearla
+            cuenta = CuentaPorPagar.query.filter_by(compra_id=compra.id).first()
+            if cuenta:
+                cuenta.monto_pagado += monto
+                cuenta.actualizar_estado()
             else:
-                compra.estado = 'parcial_pagada'
-                # Crear CxP por la diferencia
-                cuenta = CuentaPorPagar(
-                    compra_id=compra.id,
-                    proveedor_id=compra.proveedor_id,
-                    monto_total=compra.total,
-                    monto_adeudado=saldo_pendiente,
-                    estado='pendiente'
-                )
-                db.session.add(cuenta)
+                saldo_pendiente = compra.total - monto
+                if saldo_pendiente <= 0:
+                    compra.estado = 'pagada'
+                else:
+                    compra.estado = 'parcial_pagada'
+                    cuenta = CuentaPorPagar(
+                        compra_id=compra.id,
+                        proveedor_id=compra.proveedor_id,
+                        monto_total=compra.total,
+                        monto_adeudado=compra.total,
+                        estado='pendiente'
+                    )
+                    cuenta.monto_pagado = monto
+                    cuenta.actualizar_estado()
+                    db.session.add(cuenta)
             
             db.session.add(pago)
         
@@ -974,11 +1004,11 @@ def listar_nc_nd_compras():
     tab = request.args.get('tab', 'credito')
     
     if tab == 'credito':
-        notas = NotaCreditoCompra.query.order_by(NotaCreditoCompra.fecha_emision.desc()).paginate(
+        notas = NotaCreditoCompra.query.order_by(NotaCreditoCompra.fecha_registro.desc()).paginate(
             page=page, per_page=20, error_out=False
         )
     else:
-        notas = NotaDebitoCompra.query.order_by(NotaDebitoCompra.fecha_emision.desc()).paginate(
+        notas = NotaDebitoCompra.query.order_by(NotaDebitoCompra.fecha_registro.desc()).paginate(
             page=page, per_page=20, error_out=False
         )
         
@@ -990,24 +1020,44 @@ def crear_nota_credito_compra(compra_id):
     
     if request.method == 'POST':
         try:
-            ultimo = NotaCreditoCompra.query.order_by(NotaCreditoCompra.id.desc()).first()
-            numero = f"NCC-{(ultimo.id + 1 if ultimo else 1):06d}"
+            # Obtener datos del proveedor
+            numero_proveedor = request.form.get('numero_nota_proveedor', '').strip()
+            fecha_proveedor_str = request.form.get('fecha_nota_proveedor')
+            motivo = request.form.get('motivo', '').strip()
             
+            if not numero_proveedor:
+                flash('El número de nota del proveedor es obligatorio', 'warning')
+                return redirect(url_for('compras.crear_nota_credito_compra', compra_id=compra.id))
+            
+            if not fecha_proveedor_str:
+                flash('La fecha de la nota es obligatoria', 'warning')
+                return redirect(url_for('compras.crear_nota_credito_compra', compra_id=compra.id))
+            
+            if not motivo:
+                flash('El motivo es obligatorio', 'warning')
+                return redirect(url_for('compras.crear_nota_credito_compra', compra_id=compra.id))
+            
+            # Parsear fecha
+            from datetime import datetime as dt_datetime
+            fecha_proveedor = dt_datetime.strptime(fecha_proveedor_str, '%Y-%m-%d')
+            
+            # Procesar monto
             monto_str = str(request.form.get('monto', '0')).replace(',', '').replace('.', '')
             if not monto_str: monto_str = '0'
-            # Note: in Paraguay currency without decimals usually, but if there's decimals adjust logic
-            # Si el input text viene con separador de miles, limpiarlo:
             import re
             monto_str = re.sub(r'[^\d.]', '', monto_str)
             monto = Decimal(monto_str)
-            motivo = request.form.get('motivo')
             
             if monto <= 0:
                 flash('El monto debe ser mayor a 0', 'danger')
                 return redirect(url_for('compras.crear_nota_credito_compra', compra_id=compra.id))
             
+            if monto > (compra.total * Decimal('1.5')):
+                flash('Advertencia: El monto de la Nota de Crédito es inusualmente alto en comparación con la compra original.', 'warning')
+                
             nota = NotaCreditoCompra(
-                numero_nota=numero,
+                numero_nota_proveedor=numero_proveedor,
+                fecha_nota_proveedor=fecha_proveedor,
                 compra_id=compra.id,
                 proveedor_id=compra.proveedor_id,
                 motivo=motivo,
@@ -1019,6 +1069,9 @@ def crear_nota_credito_compra(compra_id):
             # Actualizar Cuenta Por Pagar si existe y está pendiente/parcial
             cuenta = CuentaPorPagar.query.filter_by(compra_id=compra.id).first()
             if cuenta:
+                if monto > cuenta.monto_adeudado:
+                    flash(f'Nota: El monto de la Nota de Crédito (Gs. {monto:,.0f}) es mayor a la deuda actual (Gs. {cuenta.monto_adeudado:,.0f}). Se generará un saldo a favor con el proveedor.', 'info')
+                
                 # La Nota de Crédito REDUCE la deuda
                 if cuenta.monto_adeudado > 0:
                     cuenta.monto_adeudado -= monto
@@ -1044,24 +1097,49 @@ def crear_nota_debito_compra(compra_id):
     
     if request.method == 'POST':
         try:
-            ultimo = NotaDebitoCompra.query.order_by(NotaDebitoCompra.id.desc()).first()
-            numero = f"NDC-{(ultimo.id + 1 if ultimo else 1):06d}"
+            # Obtener datos del proveedor
+            numero_proveedor = request.form.get('numero_nota_proveedor', '').strip()
+            fecha_proveedor_str = request.form.get('fecha_nota_proveedor')
+            tipo = request.form.get('tipo', '').strip()
+            motivo = request.form.get('motivo', '').strip()
             
+            if not numero_proveedor:
+                flash('El número de nota del proveedor es obligatorio', 'warning')
+                return redirect(url_for('compras.crear_nota_debito_compra', compra_id=compra.id))
+            
+            if not fecha_proveedor_str:
+                flash('La fecha de la nota es obligatoria', 'warning')
+                return redirect(url_for('compras.crear_nota_debito_compra', compra_id=compra.id))
+            
+            if not tipo:
+                flash('El tipo de nota es obligatorio', 'warning')
+                return redirect(url_for('compras.crear_nota_debito_compra', compra_id=compra.id))
+            
+            if not motivo:
+                flash('El motivo es obligatorio', 'warning')
+                return redirect(url_for('compras.crear_nota_debito_compra', compra_id=compra.id))
+            
+            # Parsear fecha
+            from datetime import datetime as dt_datetime
+            fecha_proveedor = dt_datetime.strptime(fecha_proveedor_str, '%Y-%m-%d')
+            
+            # Procesar monto
             monto_str = str(request.form.get('monto', '0')).replace(',', '').replace('.', '')
             import re
             monto_str = re.sub(r'[^\d.]', '', monto_str)
             if not monto_str: monto_str = '0'
             monto = Decimal(monto_str)
             
-            tipo = request.form.get('tipo')
-            motivo = request.form.get('motivo')
-            
             if monto <= 0:
                 flash('El monto debe ser mayor a 0', 'danger')
                 return redirect(url_for('compras.crear_nota_debito_compra', compra_id=compra.id))
             
+            if monto > (compra.total * Decimal('1.5')):
+                flash('Advertencia: El monto de la Nota de Débito es inusualmente alto en comparación con la compra original.', 'warning')
+                
             nota = NotaDebitoCompra(
-                numero_nota=numero,
+                numero_nota_proveedor=numero_proveedor,
+                fecha_nota_proveedor=fecha_proveedor,
                 compra_id=compra.id,
                 proveedor_id=compra.proveedor_id,
                 tipo=tipo,
@@ -1083,6 +1161,7 @@ def crear_nota_debito_compra(compra_id):
                     estado='pendiente'
                 )
                 compra.estado = 'parcial_pagada' # Vuelve a estar adeudada
+                flash('Nota: La compra original ya estaba totalmente pagada. Esta Nota de Débito ha generado una nueva deuda pendiente con el proveedor.', 'info')
             else:
                 # La Nota de Débito AUMENTA la deuda
                 cuenta.monto_adeudado += monto

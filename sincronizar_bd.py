@@ -26,18 +26,8 @@ def main():
             print("[OK] Tablas creadas/actualizadas")
             
             print("\n[2/3] Validando integridad de tablas...")
-            # Listar todas las tablas esperadas
-            expected_tables = [
-                'usuarios', 'categorias', 'productos', 'movimientos_producto',
-                'historial_precios', 'clientes', 'ventas', 'venta_detalles',
-                'pagos', 'notas_credito', 'nota_credito_detalles',
-                'notas_debito', 'nota_debito_detalles', 'pagos_nota_debito',
-                'notas_credito_compra', 'nota_credito_compra_detalles',
-                'notas_debito_compra', 'nota_debito_compra_detalles',
-                'compras', 'compra_detalles', 'ordenes_servicio',
-                'orden_servicio_detalles', 'servicios', 'cajas', 'apertura_caja',
-                'configuracion_empresa', 'bitacora', 'formas_pago'
-            ]
+            # Listar todas las tablas esperadas dinámicamente desde los modelos
+            expected_tables = list(db.metadata.tables.keys())
             
             inspector = db.inspect(db.engine)
             existing_tables = inspector.get_table_names()

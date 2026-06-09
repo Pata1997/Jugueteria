@@ -1,36 +1,59 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container mt-4">
-    <h2>Emitir Nota de Débito de Compra</h2>
+    <h2>Registrar Nota de Débito del Proveedor</h2>
+    <p class="text-muted">Ingrese los datos de la nota de débito que recibió del proveedor</p>
+    
     <form method="post">
-        <div class="mb-3">
-            <label class="form-label">Compra Asociada</label>
-            <input type="text" class="form-control" value="{{ compra.numero_compra }}" readonly>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Compra Asociada</label>
+                    <input type="text" class="form-control" value="{{ compra.numero_compra }}" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Proveedor</label>
+                    <input type="text" class="form-control" value="{{ compra.proveedor.razon_social }}" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Número de Nota del Proveedor *</label>
+                    <input type="text" class="form-control" name="numero_nota_proveedor" required 
+                           placeholder="Ej: ND-2024-500, ND-ABC-123, etc.">
+                    <small class="text-muted">Ingrese el número exacto que figura en la nota del proveedor</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Fecha de la Nota *</label>
+                    <input type="date" class="form-control" name="fecha_nota_proveedor" required>
+                    <small class="text-muted">La fecha que aparece en la nota del proveedor</small>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Tipo *</label>
+                    <select class="form-select" name="tipo" required>
+                        <option value="">-- Seleccione --</option>
+                        <option value="flete">Flete</option>
+                        <option value="interes">Intereses por mora</option>
+                        <option value="recargo">Recargo</option>
+                        <option value="otro">Otro</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Motivo *</label>
+                    <input type="text" class="form-control" name="motivo" required maxlength="200">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Monto (Gs) *</label>
+                    <input type="text" class="form-control" name="monto" required>
+                    <small class="text-muted">Este monto incrementará el saldo de la Cuenta por Pagar asociada a esta compra.</small>
+                </div>
+            </div>
         </div>
-        <div class="mb-3">
-            <label class="form-label">Proveedor</label>
-            <input type="text" class="form-control" value="{{ compra.proveedor.razon_social }}" readonly>
+        
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">Registrar Nota de Débito</button>
+            <a href="{{ url_for('compras.ver', id=compra.id) }}" class="btn btn-secondary">Cancelar</a>
         </div>
-        <div class="mb-3">
-            <label class="form-label">Tipo *</label>
-            <select class="form-select" name="tipo" required>
-                <option value="flete">Flete</option>
-                <option value="interes">Intereses por mora</option>
-                <option value="recargo">Recargo</option>
-                <option value="otro">Otro</option>
-            </select>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Motivo *</label>
-            <input type="text" class="form-control" name="motivo" required maxlength="200">
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Monto (Gs) *</label>
-            <input type="text" class="form-control" name="monto" required>
-            <small class="text-muted">Este monto incrementará el saldo de la Cuenta por Pagar asociada a esta compra.</small>
-        </div>
-        <button type="submit" class="btn btn-primary">Emitir Nota de Débito</button>
-        <a href="{{ url_for('compras.ver', id=compra.id) }}" class="btn btn-secondary">Cancelar</a>
     </form>
 </div>
 {% endblock %}

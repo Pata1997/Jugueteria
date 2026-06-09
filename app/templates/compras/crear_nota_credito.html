@@ -1,27 +1,54 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="container mt-4">
-    <h2>Emitir Nota de Crédito de Compra</h2>
+    <h2>Registrar Nota de Crédito del Proveedor</h2>
+    <p class="text-muted">Ingrese los datos de la nota de crédito que recibió del proveedor</p>
+    
     <form method="post">
-        <div class="mb-3">
-            <label class="form-label">Compra Asociada</label>
-            <input type="text" class="form-control" value="{{ compra.numero_compra }}" readonly>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Compra Asociada</label>
+                    <input type="text" class="form-control" value="{{ compra.numero_compra }}" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Proveedor</label>
+                    <input type="text" class="form-control" value="{{ compra.proveedor.razon_social }}" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Número de Nota del Proveedor *</label>
+                    <input type="text" class="form-control" name="numero_nota_proveedor" required 
+                           placeholder="Ej: NC-2024-001, NC-123-ABC, etc.">
+                    <small class="text-muted">Ingrese el número exacto que figura en la nota del proveedor</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Fecha de la Nota *</label>
+                    <input type="date" class="form-control" name="fecha_nota_proveedor" required>
+                    <small class="text-muted">La fecha que aparece en la nota del proveedor</small>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Motivo *</label>
+                    <input type="text" class="form-control" name="motivo" required maxlength="200" 
+                           placeholder="Ej: Devolución de mercadería, descuento por volumen...">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Monto (Gs) *</label>
+                    <input type="text" class="form-control" name="monto" required>
+                    <small class="text-muted">Este monto reducirá el saldo de la Cuenta por Pagar asociada a esta compra.</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Observaciones</label>
+                    <textarea class="form-control" name="observaciones" rows="3"></textarea>
+                </div>
+            </div>
         </div>
-        <div class="mb-3">
-            <label class="form-label">Proveedor</label>
-            <input type="text" class="form-control" value="{{ compra.proveedor.razon_social }}" readonly>
+        
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary">Registrar Nota de Crédito</button>
+            <a href="{{ url_for('compras.ver', id=compra.id) }}" class="btn btn-secondary">Cancelar</a>
         </div>
-        <div class="mb-3">
-            <label class="form-label">Motivo *</label>
-            <input type="text" class="form-control" name="motivo" required maxlength="200" placeholder="Ej: Devolución de mercadería, descuento por volumen...">
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Monto (Gs) *</label>
-            <input type="text" class="form-control" name="monto" required>
-            <small class="text-muted">Este monto reducirá el saldo de la Cuenta por Pagar asociada a esta compra.</small>
-        </div>
-        <button type="submit" class="btn btn-primary">Emitir Nota de Crédito</button>
-        <a href="{{ url_for('compras.ver', id=compra.id) }}" class="btn btn-secondary">Cancelar</a>
     </form>
 </div>
 {% endblock %}

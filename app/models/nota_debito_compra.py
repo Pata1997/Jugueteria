@@ -5,8 +5,12 @@ class NotaDebitoCompra(db.Model):
     __tablename__ = 'notas_debito_compra'
     
     id = db.Column(db.Integer, primary_key=True)
-    numero_nota = db.Column(db.String(50), unique=True, nullable=False, index=True)
-    fecha_emision = db.Column(db.DateTime, default=datetime.utcnow)
+    # Número emitido por el proveedor
+    numero_nota_proveedor = db.Column(db.String(50), nullable=False, index=True)
+    # Fecha emitida por el proveedor
+    fecha_nota_proveedor = db.Column(db.DateTime, nullable=False)
+    # Fecha de registro en nuestro sistema
+    fecha_registro = db.Column(db.DateTime, default=datetime.utcnow)
     compra_id = db.Column(db.Integer, db.ForeignKey('compras.id'), nullable=False)
     proveedor_id = db.Column(db.Integer, db.ForeignKey('proveedores.id'), nullable=False)
     
@@ -26,7 +30,7 @@ class NotaDebitoCompra(db.Model):
     detalles = db.relationship('NotaDebitoCompraDetalle', backref='nota_debito', lazy='select', cascade='all, delete-orphan')
     
     def __repr__(self):
-        return f'<NotaDebitoCompra {self.numero_nota}>'
+        return f'<NotaDebitoCompra {self.numero_nota_proveedor}>'
 
 class NotaDebitoCompraDetalle(db.Model):
     __tablename__ = 'nota_debito_compra_detalles'

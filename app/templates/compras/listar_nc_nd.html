@@ -30,8 +30,8 @@
                     <tbody>
                         {% for nota in notas.items %}
                         <tr>
-                            <td>{{ nota.numero_nota }}</td>
-                            <td>{{ nota.fecha_emision.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>{{ nota.numero_nota_proveedor }}</td>
+                            <td>{{ nota.fecha_nota_proveedor.strftime('%d/%m/%Y') }}</td>
                             <td>{{ nota.proveedor.razon_social }}</td>
                             <td><a href="{{ url_for('compras.ver', id=nota.compra.id) }}">{{ nota.compra.numero_compra }}</a></td>
                             <td>Gs. {{ "{:,.0f}".format(nota.monto).replace(',', '.') }}</td>
@@ -80,8 +80,8 @@
                     <tbody>
                         {% for nota in notas.items %}
                         <tr>
-                            <td>{{ nota.numero_nota }}</td>
-                            <td>{{ nota.fecha_emision.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>{{ nota.numero_nota_proveedor }}</td>
+                            <td>{{ nota.fecha_nota_proveedor.strftime('%d/%m/%Y') }}</td>
                             <td>{{ nota.proveedor.razon_social }}</td>
                             <td><a href="{{ url_for('compras.ver', id=nota.compra.id) }}">{{ nota.compra.numero_compra }}</a></td>
                             <td><span class="badge bg-secondary">{{ nota.tipo|title }}</span></td>
