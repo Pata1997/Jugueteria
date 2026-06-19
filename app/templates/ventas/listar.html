@@ -128,22 +128,24 @@
         
         <!-- Paginación -->
         {% if ventas.pages > 1 %}
+        {% set pagination_args = request.args.to_dict() %}
+        {% set _ = pagination_args.pop('page', None) %}
         <nav>
             <ul class="pagination justify-content-center">
                 <li class="page-item {% if not ventas.has_prev %}disabled{% endif %}">
-                    <a class="page-link" href="{{ url_for('ventas.listar', page=ventas.prev_num, **request.args) }}">Anterior</a>
+                    <a class="page-link" href="{{ url_for('ventas.listar', page=ventas.prev_num, **pagination_args) }}">Anterior</a>
                 </li>
                 {% for num in ventas.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
                     {% if num %}
                         <li class="page-item {% if num == ventas.page %}active{% endif %}">
-                            <a class="page-link" href="{{ url_for('ventas.listar', page=num, **request.args) }}">{{ num }}</a>
+                            <a class="page-link" href="{{ url_for('ventas.listar', page=num, **pagination_args) }}">{{ num }}</a>
                         </li>
                     {% else %}
                         <li class="page-item disabled"><span class="page-link">...</span></li>
                     {% endif %}
                 {% endfor %}
                 <li class="page-item {% if not ventas.has_next %}disabled{% endif %}">
-                    <a class="page-link" href="{{ url_for('ventas.listar', page=ventas.next_num, **request.args) }}">Siguiente</a>
+                    <a class="page-link" href="{{ url_for('ventas.listar', page=ventas.next_num, **pagination_args) }}">Siguiente</a>
                 </li>
             </ul>
         </nav>

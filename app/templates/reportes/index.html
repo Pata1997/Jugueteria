@@ -13,8 +13,14 @@
                 </div>
                 <div class="card-body">
                     <div class="list-group">
-                        <a href="{{ url_for('reportes.financiero_pdf', mes=mes_actual, anio=anio_actual) }}" target="_blank" class="list-group-item list-group-item-action">
-                            <i class="fas fa-balance-scale"></i> Balance Financiero Mensual (PDF)
+                        <a href="{{ url_for('reportes.proveedores_pdf') }}" target="_blank" class="list-group-item list-group-item-action">
+                            <i class="fas fa-truck"></i> Reporte de Proveedores (PDF)
+                        </a>
+                        <a href="{{ url_for('reportes.reclamos_pdf', desde=primer_dia, hasta=hoy_str) }}" target="_blank" class="list-group-item list-group-item-action">
+                            <i class="fas fa-exclamation-circle"></i> Reporte de Reclamos (PDF)
+                        </a>
+                        <a href="{{ url_for('reportes.presupuestos_sin_aprobar_pdf', desde=primer_dia, hasta=hoy_str) }}" target="_blank" class="list-group-item list-group-item-action">
+                            <i class="fas fa-file-signature"></i> Reporte de Presupuestos sin Aprobar (PDF)
                         </a>
                         <a href="{{ url_for('reportes.compras_pdf', desde=primer_dia, hasta=hoy_str) }}" target="_blank" class="list-group-item list-group-item-action">
                             <i class="fas fa-shopping-cart"></i> Reporte de Compras (PDF)
@@ -95,7 +101,9 @@ document.getElementById('form-buscar-cajas').addEventListener('submit', function
                     <label class="form-label">Tipo de Reporte</label>
                     <select class="form-select" name="tipo_reporte" required>
                         <option value="">Seleccione...</option>
-                        <option value="financiero">Balance Financiero Mensual (PDF)</option>
+                        <option value="proveedores">Reporte de Proveedores (PDF)</option>
+                        <option value="reclamos">Reporte de Reclamos (PDF)</option>
+                        <option value="presupuestos_sin_aprobar">Presupuestos sin Aprobar (PDF)</option>
                         <option value="compras">Reporte de Compras (PDF)</option>
                         <option value="servicios">Reporte de Servicios (PDF)</option>
                         <option value="ventas_html">Reporte de Ventas (HTML)</option>

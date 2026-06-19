@@ -11,7 +11,8 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfgen import canvas
 from app import db
-from app.models import Compra, Proveedor, Venta, Producto, Cliente, ConfiguracionEmpresa, OrdenServicio, AperturaCaja, Caja, Usuario
+from app.models import Compra, Proveedor, Venta, Producto, Cliente, ConfiguracionEmpresa, OrdenServicio, AperturaCaja, Caja, Usuario, Reclamo
+from app.models.servicio import Presupuesto
 
 
 # ==== BLUEPRINT ====
@@ -25,10 +26,12 @@ def reporte_personalizado():
     fecha_desde = request.form.get('fecha_desde')
     fecha_hasta = request.form.get('fecha_hasta')
     # Redirigir o llamar a la función correspondiente según el tipo
-    if tipo == 'financiero':
-        # Redirige al balance financiero mensual
-        fecha = datetime.strptime(fecha_desde, '%Y-%m-%d')
-        return redirect(url_for('reportes.financiero_pdf', mes=fecha.month, anio=fecha.year))
+    if tipo == 'proveedores':
+        return redirect(url_for('reportes.proveedores_pdf', desde=fecha_desde, hasta=fecha_hasta))
+    elif tipo == 'reclamos':
+        return redirect(url_for('reportes.reclamos_pdf', desde=fecha_desde, hasta=fecha_hasta))
+    elif tipo == 'presupuestos_sin_aprobar':
+        return redirect(url_for('reportes.presupuestos_sin_aprobar_pdf', desde=fecha_desde, hasta=fecha_hasta))
     elif tipo == 'compras':
         return redirect(url_for('reportes.compras_pdf', desde=fecha_desde, hasta=fecha_hasta))
     elif tipo == 'servicios':
@@ -159,72 +162,181 @@ def reportes_servicios():
 # =====================================================
 # REPORTE FINANCIERO MENSUAL (PDF)
 # =====================================================
-@bp.route('/financiero/pdf')
+# =====================================================
+# REPORTE DE PROVEEDORES (PDF)
+# =====================================================
+@bp.route('/proveedores/pdf')
 @login_required
-def financiero_pdf():
+def proveedores_pdf():
+    fecha_desde = request.args.get('desde')
+    fecha_hasta = request.args.get('hasta')
+    query = Proveedor.query
+    if fecha_desde:
+        try:
+            fecha_desde_dt = datetime.strptime(fecha_desde, '%Y-%m-%d')
+            query = query.filter(Proveedor.fecha_registro >= fecha_desde_dt)
+        except Exception:
+            pass
+    if fecha_hasta:
+        try:
+            fecha_hasta_dt = datetime.strptime(fecha_hasta, '%Y-%m-%d')
+            fecha_hasta_dt = fecha_hasta_dt.replace(hour=23, minute=59, second=59)
+            query = query.filter(Proveedor.fecha_registro <= fecha_hasta_dt)
+        except Exception:
+            pass
+    proveedores = query.all()
     from app.utils.base_pdf import PDFReportBase
-    from app.utils.tabla_pdf import build_pdf_table
-    from datetime import date, datetime, timedelta
     empresa = ConfiguracionEmpresa.query.first()
-    # Parámetros de mes
-    hoy = date.today()
-    mes = int(request.args.get('mes', hoy.month))
-    anio = int(request.args.get('anio', hoy.year))
-    fecha_inicio = date(anio, mes, 1)
-    if mes == 12:
-        fecha_fin = date(anio + 1, 1, 1) - timedelta(days=1)
-    else:
-        fecha_fin = date(anio, mes + 1, 1) - timedelta(days=1)
-    # Ventas completadas en el mes
-    ventas = Venta.query.filter(
-        Venta.fecha_venta >= fecha_inicio,
-        Venta.fecha_venta <= fecha_fin,
-        Venta.estado == 'completada'
-    ).all()
-    total_ventas = sum(float(v.total) for v in ventas)
-    # Compras pagadas en el mes
-    compras = Compra.query.filter(
-        Compra.fecha_compra >= fecha_inicio,
-        Compra.fecha_compra <= fecha_fin,
-        Compra.estado.in_(['pagada'])
-    ).all()
-    total_compras = sum(float(c.total) for c in compras)
-    # Compras pendientes/parcial en el mes (informativo)
-    compras_pendientes = Compra.query.filter(
-        Compra.fecha_compra >= fecha_inicio,
-        Compra.fecha_compra <= fecha_fin,
-        Compra.estado.in_(['registrada', 'parcial_pagada'])
-    ).all()
-    total_pendientes = sum(float(c.total) for c in compras_pendientes)
-    ganancia = total_ventas - total_compras
-    resultado = 'GANANCIA' if ganancia >= 0 else 'PÉRDIDA'
-    resultado_es = 'GANANCIA' if ganancia >= 0 else 'PÉRDIDA'
-    # Mes en español
-    meses_es = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
-    mes_nombre = meses_es[mes-1].capitalize()
-    # PDF armado
-    pdf = PDFReportBase(empresa, f"Balance Financiero {mes_nombre} {anio}", f"balance_financiero_{anio}_{mes:02d}.pdf")
+    headers = ["Código", "RUC", "Razón Social", "Teléfono", "Email", "Estado"]
+    col_widths = [60, 70, 150, 80, 120, 50]
+    table_data = [headers]
+    for p in proveedores:
+        table_data.append([
+            p.codigo,
+            p.ruc,
+            p.razon_social,
+            p.telefono or '',
+            p.email or '',
+            'Activo' if p.activo else 'Inactivo'
+        ])
+    pdf = PDFReportBase(empresa, "Reporte de Proveedores", "reporte_proveedores.pdf")
     pdf.add_membrete()
     pdf.add_title()
-    resumen = f"<b>Período:</b> {fecha_inicio.strftime('%d/%m/%Y')} al {fecha_fin.strftime('%d/%m/%Y')}<br/>"
-    resumen += f"<b>Total vendido:</b> Gs. {total_ventas:,.0f}<br/>"
-    resumen += f"<b>Total gastado:</b> Gs. {total_compras:,.0f}<br/>"
-    resumen += f"<b>Compras pendientes de pago (informativo):</b> Gs. {total_pendientes:,.0f}<br/>"
-    resumen += f"<b>Resultado:</b> <font color='{'green' if ganancia >= 0 else 'red'}'><b>{resultado_es}</b></font> Gs. {ganancia:,.0f}"
-    from reportlab.platypus import Paragraph, Spacer
-    from reportlab.lib.styles import getSampleStyleSheet
-    styles = getSampleStyleSheet()
-    pdf.elements.append(Paragraph(resumen, styles['Normal']))
-    pdf.elements.append(Spacer(1, 16))
-    # Tabla detalle
-    headers = ["Concepto", "Monto (Gs.)"]
-    col_widths = [200, 150]
+    from reportlab.platypus import Table, TableStyle
+    from reportlab.lib import colors
+    table = Table(table_data, colWidths=col_widths)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#27ae60')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+    ]))
+    pdf.elements.append(table)
+    return pdf.build()
+
+# =====================================================
+# REPORTE DE RECLAMOS (PDF)
+# =====================================================
+@bp.route('/reclamos/pdf')
+@login_required
+def reclamos_pdf():
+    fecha_desde = request.args.get('desde')
+    fecha_hasta = request.args.get('hasta')
+    query = Reclamo.query
+    if fecha_desde:
+        try:
+            fecha_desde_dt = datetime.strptime(fecha_desde, '%Y-%m-%d')
+            query = query.filter(Reclamo.fecha_creacion >= fecha_desde_dt)
+        except Exception:
+            pass
+    if fecha_hasta:
+        try:
+            fecha_hasta_dt = datetime.strptime(fecha_hasta, '%Y-%m-%d')
+            fecha_hasta_dt = fecha_hasta_dt.replace(hour=23, minute=59, second=59)
+            query = query.filter(Reclamo.fecha_creacion <= fecha_hasta_dt)
+        except Exception:
+            pass
+    reclamos = query.all()
+    from app.utils.base_pdf import PDFReportBase
+    empresa = ConfiguracionEmpresa.query.first()
+    headers = ["N° Reclamo", "Fecha", "Cliente", "Tipo", "Prioridad", "Estado"]
+    col_widths = [70, 70, 140, 100, 70, 80]
     table_data = [headers]
-    table_data.append(["Total vendido", f"Gs. {total_ventas:,.0f}"])
-    table_data.append(["Total gastado", f"Gs. {total_compras:,.0f}"])
-    table_data.append(["Compras pendientes de pago", f"Gs. {total_pendientes:,.0f}"])
-    table_data.append([resultado_es, f"Gs. {ganancia:,.0f}"])
-    pdf.elements.append(build_pdf_table(table_data, col_widths, header_color='#8e44ad'))
+    for r in reclamos:
+        cliente_nombre = ''
+        if r.cliente_id:
+            cliente = Cliente.query.get(r.cliente_id)
+            if cliente:
+                cliente_nombre = cliente.nombre
+        fecha_str = r.fecha_creacion.strftime('%d/%m/%Y') if r.fecha_creacion else ''
+        table_data.append([
+            r.numero,
+            fecha_str,
+            cliente_nombre,
+            r.tipo_reclamo or '',
+            (r.prioridad or '').capitalize(),
+            (r.estado or '').capitalize()
+        ])
+    pdf = PDFReportBase(empresa, "Reporte de Reclamos", "reporte_reclamos.pdf")
+    pdf.add_membrete()
+    pdf.add_title()
+    from reportlab.platypus import Table, TableStyle
+    from reportlab.lib import colors
+    table = Table(table_data, colWidths=col_widths)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e74c3c')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+    ]))
+    pdf.elements.append(table)
+    return pdf.build()
+
+# =====================================================
+# REPORTE DE PRESUPUESTOS SIN APROBAR (PDF)
+# =====================================================
+@bp.route('/presupuestos-sin-aprobar/pdf')
+@login_required
+def presupuestos_sin_aprobar_pdf():
+    fecha_desde = request.args.get('desde')
+    fecha_hasta = request.args.get('hasta')
+    query = Presupuesto.query.filter(Presupuesto.estado != 'aprobado')
+    if fecha_desde:
+        try:
+            fecha_desde_dt = datetime.strptime(fecha_desde, '%Y-%m-%d')
+            query = query.filter(Presupuesto.fecha_emision >= fecha_desde_dt)
+        except Exception:
+            pass
+    if fecha_hasta:
+        try:
+            fecha_hasta_dt = datetime.strptime(fecha_hasta, '%Y-%m-%d')
+            fecha_hasta_dt = fecha_hasta_dt.replace(hour=23, minute=59, second=59)
+            query = query.filter(Presupuesto.fecha_emision <= fecha_hasta_dt)
+        except Exception:
+            pass
+    presupuestos = query.all()
+    from app.utils.base_pdf import PDFReportBase
+    empresa = ConfiguracionEmpresa.query.first()
+    headers = ["N° Presup.", "Fecha", "Cliente", "Total (Gs.)", "Estado"]
+    col_widths = [90, 80, 160, 100, 100]
+    table_data = [headers]
+    for p in presupuestos:
+        cliente_nombre = ''
+        if p.solicitud and p.solicitud.cliente:
+            cliente_nombre = p.solicitud.cliente.nombre
+        fecha_str = p.fecha_emision.strftime('%d/%m/%Y') if p.fecha_emision else ''
+        table_data.append([
+            p.numero_presupuesto,
+            fecha_str,
+            cliente_nombre,
+            f"{p.total:,.0f}" if p.total else "0",
+            (p.estado or '').capitalize()
+        ])
+    pdf = PDFReportBase(empresa, "Reporte de Presupuestos Sin Aprobar", "reporte_presupuestos_sin_aprobar.pdf")
+    pdf.add_membrete()
+    pdf.add_title()
+    from reportlab.platypus import Table, TableStyle
+    from reportlab.lib import colors
+    table = Table(table_data, colWidths=col_widths)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f39c12')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8f9fa')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+    ]))
+    pdf.elements.append(table)
     return pdf.build()
 
 
