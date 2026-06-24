@@ -30,6 +30,9 @@
                         <strong>Nº: {{ presupuesto.numero_presupuesto }}</strong><br>
                         Fecha: {{ presupuesto.fecha_recepcion.strftime('%d/%m/%Y') }}<br>
                         Validez: {{ presupuesto.fecha_validez.strftime('%d/%m/%Y') if presupuesto.fecha_validez else 'No especificada' }}
+                        {% if presupuesto.pedido %}
+                        <br>Pedido asociado: <a href="{{ url_for('compras.ver_pedido', id=presupuesto.pedido.id) }}" class="text-decoration-none">{{ presupuesto.pedido.numero_pedido }}</a>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -88,7 +91,7 @@
                 {% if presupuesto.estado == 'pendiente' %}
                 <form method="POST" action="{{ url_for('compras.convertir_presupuesto_a_compra', id=presupuesto.id) }}" class="mb-2">
                     <button type="submit" class="btn btn-success w-100">
-                        <i class="fas fa-shopping-cart"></i> Convertir en Compra
+                        <i class="fas fa-shopping-cart"></i> Registrar como Pedido de Compra
                     </button>
                 </form>
                 

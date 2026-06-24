@@ -162,7 +162,25 @@ def pedidos():
     pedidos = PedidoCompra.query.order_by(PedidoCompra.fecha_pedido.desc()).paginate(
         page=page, per_page=20, error_out=False
     )
-    return render_template('compras/pedidos.html', pedidos=pedidos)
+    estadisticas = {
+        'pendientes': PedidoCompra.query.filter_by(estado='pendiente').count(),
+        'cotizando': PedidoCompra.query.filter_by(estado='cotizando').count(),
+        'aprobados': PedidoCompra.query.filter_by(estado='aprobado').count(),
+        'ordenados': PedidoCompra.query.filter_by(estado='ordenado').count(),
+    }
+    return render_template('compras/pedidos.html', pedidos=pedidos, estadisticas=estadisticas)
+
+@bp.route('/pedidos/solicitar-cotizaciones', methods=['POST'])
+@login_required
+def solicitar_cotizaciones():
+    pedido_id = request.form.get('pedido_id', type=int)
+    if not pedido_id:
+        return jsonify({'error': 'No se indicó el pedido'}), 400
+
+    pedido = PedidoCompra.query.get_or_404(pedido_id)
+    pedido.estado = 'cotizando'
+    db.session.commit()
+    return jsonify({'mensaje': 'Solicitud de cotización enviada correctamente'})
 
 @bp.route('/pedidos/crear', methods=['GET', 'POST'])
 @login_required
@@ -171,16 +189,28 @@ def crear_pedido():
         try:
             ultimo = PedidoCompra.query.order_by(PedidoCompra.id.desc()).first()
             numero = f"PED-{(ultimo.id + 1 if ultimo else 1):06d}"
+            fecha_entrega = request.form.get('fecha_entrega_estimada') or None
+            if fecha_entrega:
+                fecha_entrega = datetime.strptime(fecha_entrega, '%Y-%m-%d').date()
+
             pedido = PedidoCompra(
                 numero_pedido=numero,
                 proveedor_id=request.form.get('proveedor_id'),
-                fecha_entrega_estimada=request.form.get('fecha_entrega_estimada'),
+                fecha_entrega_estimada=fecha_entrega,
                 usuario_solicita_id=current_user.id,
                 observaciones=request.form.get('observaciones')
             )
             import json
-            detalles_json = request.form.get('detalles_json')
-            detalles = json.loads(detalles_json)
+            detalles_json = (request.form.get('detalles_json') or '').strip()
+            detalles = []
+            if detalles_json:
+                detalles = json.loads(detalles_json)
+            elif request.form.get('producto_id') and request.form.get('cantidad_solicitada'):
+                detalles.append({
+                    'producto_id': request.form.get('producto_id'),
+                    'cantidad': request.form.get('cantidad_solicitada')
+                })
+
             for det in detalles:
                 detalle = PedidoCompraDetalle(
                     pedido=pedido,
@@ -191,13 +221,15 @@ def crear_pedido():
             db.session.add(pedido)
             db.session.commit()
             registrar_bitacora('crear-pedido', f'Pedido creado: {pedido.numero_pedido} para proveedor {pedido.proveedor_id}')
-            flash('Pedido creado correctamente', 'success')
+            flash('Pedido de compra creado correctamente', 'success')
             return redirect(url_for('compras.ver_pedido', id=pedido.id))
         except Exception as e:
             db.session.rollback()
             flash(f'Error: {str(e)}', 'danger')
     proveedores = Proveedor.query.filter_by(activo=True).all()
-    return render_template('compras/crear_pedido.html', proveedores=proveedores)
+    from app.models.producto import Producto
+    productos = Producto.query.filter_by(activo=True).all()
+    return render_template('compras/crear_pedido.html', proveedores=proveedores, productos=productos)
 
 @bp.route('/pedidos/<int:id>')
 @login_required
@@ -310,8 +342,8 @@ def listar():
 @bp.route('/crear', methods=['GET', 'POST'])
 @login_required
 def crear_compra():
-    """Redirige a la nueva ruta de registrar compra"""
-    return redirect(url_for('compras.registrar_compra'))
+    """Redirige al primer paso del flujo: crear pedido de compra."""
+    return redirect(url_for('compras.crear_pedido'))
 
 @bp.route('/<int:id>')
 @login_required
@@ -684,16 +716,35 @@ def convertir_presupuesto_a_compra(id):
     presupuesto = PresupuestoProveedor.query.get_or_404(id)
     
     try:
-        # Generar número de compra
-        ultimo = Compra.query.filter(Compra.numero_compra.isnot(None)).order_by(Compra.id.desc()).first()
-        numero = f"C-{(ultimo.id + 1 if ultimo else 1):06d}"
-        
-        # Crear compra automáticamente
+        ultimo_pedido = PedidoCompra.query.order_by(PedidoCompra.id.desc()).first()
+        numero_pedido = f"PED-{(ultimo_pedido.id + 1 if ultimo_pedido else 1):06d}"
+
+        pedido = PedidoCompra(
+            numero_pedido=numero_pedido,
+            proveedor_id=presupuesto.proveedor_id,
+            fecha_entrega_estimada=presupuesto.fecha_validez,
+            usuario_solicita_id=current_user.id,
+            observaciones=presupuesto.observaciones or f"Generado desde presupuesto {presupuesto.numero_presupuesto}"
+        )
+        db.session.add(pedido)
+
+        for det in presupuesto.detalles:
+            detalle = PedidoCompraDetalle(
+                pedido=pedido,
+                producto_id=det.producto_id,
+                cantidad_solicitada=det.cantidad,
+                observaciones=det.producto.nombre if det.producto else ''
+            )
+            db.session.add(detalle)
+
+        ultimo_compra = Compra.query.filter(Compra.numero_compra.isnot(None)).order_by(Compra.id.desc()).first()
+        numero_compra = f"C-{(ultimo_compra.id + 1 if ultimo_compra else 1):06d}"
+
         compra = Compra(
-            numero_compra=numero,
+            numero_compra=numero_compra,
             proveedor_id=presupuesto.proveedor_id,
             tipo='producto',
-            descripcion=f"Compra generada automáticamente a partir del presupuesto {presupuesto.numero_presupuesto}",
+            descripcion=f"Pedido: {numero_pedido} | Presupuesto: {presupuesto.numero_presupuesto}",
             estado='registrada',
             usuario_registra_id=current_user.id,
             fecha_compra=datetime.utcnow(),
@@ -702,10 +753,8 @@ def convertir_presupuesto_a_compra(id):
             total=presupuesto.total,
             stock_actualizado=False
         )
-        
         db.session.add(compra)
-        
-        # Copiar detalles
+
         for det in presupuesto.detalles:
             detalle = CompraDetalle(
                 compra=compra,
@@ -716,12 +765,13 @@ def convertir_presupuesto_a_compra(id):
                 concepto=det.producto.nombre if det.producto else ''
             )
             db.session.add(detalle)
-        
+
+        presupuesto.pedido_id = pedido.id
         presupuesto.estado = 'seleccionado'
         db.session.add(presupuesto)
         db.session.commit()
-        
-        flash('Compra registrada automáticamente desde el presupuesto.', 'success')
+
+        flash('Pedido y compra registrados correctamente.', 'success')
         return redirect(url_for('compras.pendientes_pago'))
         
     except Exception as e:
@@ -1035,6 +1085,13 @@ def crear_nota_credito_compra(compra_id):
             
             if not motivo:
                 flash('El motivo es obligatorio', 'warning')
+                return redirect(url_for('compras.crear_nota_credito_compra', compra_id=compra.id))
+
+            numero_existente = NotaCreditoCompra.query.filter(
+                NotaCreditoCompra.numero_nota_proveedor.ilike(numero_proveedor)
+            ).first()
+            if numero_existente:
+                flash('El número de nota del proveedor ya existe en otra Nota de Crédito registrada.', 'warning')
                 return redirect(url_for('compras.crear_nota_credito_compra', compra_id=compra.id))
             
             # Parsear fecha

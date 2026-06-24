@@ -51,6 +51,7 @@
                 <thead>
                     <tr>
                         <th>Nº Pedido</th>
+                        <th>Nº Presupuesto</th>
                         <th>Fecha</th>
                         <th>Solicitante</th>
                         <th>Fecha Necesaria</th>
@@ -62,10 +63,20 @@
                 <tbody>
                     {% for pedido in pedidos.items %}
                     <tr>
-                        <td><strong>{{ pedido.nro_pedido }}</strong></td>
+                        <td><strong>{{ pedido.numero_pedido }}</strong></td>
+                        <td>
+                            {% set presupuesto = pedido.presupuestos.first() %}
+                            {% if presupuesto %}
+                                <a href="{{ url_for('compras.ver_presupuesto_independiente', id=presupuesto.id) }}" class="text-decoration-none">
+                                    {{ presupuesto.numero_presupuesto }}
+                                </a>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
                         <td>{{ pedido.fecha_pedido.strftime('%d/%m/%Y') }}</td>
-                        <td>{{ pedido.usuario.nombre_completo }}</td>
-                        <td>{{ pedido.fecha_necesaria.strftime('%d/%m/%Y') if pedido.fecha_necesaria else '-' }}</td>
+                        <td>{{ pedido.usuario_solicita.nombre_completo if pedido.usuario_solicita else '-' }}</td>
+                        <td>{{ pedido.fecha_entrega_estimada.strftime('%d/%m/%Y') if pedido.fecha_entrega_estimada else '-' }}</td>
                         <td class="text-center">
                             <span class="badge bg-info">{{ pedido.detalles|length }}</span>
                         </td>
@@ -95,7 +106,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="7" class="text-center">No hay pedidos registrados</td>
+                        <td colspan="8" class="text-center">No hay pedidos registrados</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -167,7 +178,7 @@ function solicitarCotizaciones(pedidoId) {
                 location.reload();
             })
             .fail(function(xhr) {
-                alert('Error: ' + xhr.responseJSON.error);
+                alert('Error: ' + (xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : 'No se pudo completar la acción'));
             });
     }
 }

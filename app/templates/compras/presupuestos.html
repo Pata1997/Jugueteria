@@ -17,6 +17,7 @@
                 <thead class="table-dark">
                     <tr>
                         <th>Nº Presupuesto</th>
+                        <th>Nº Pedido</th>
                         <th>Fecha</th>
                         <th>Proveedor</th>
                         <th>Total</th>
@@ -28,6 +29,15 @@
                     {% for p in presupuestos.items %}
                     <tr>
                         <td>{{ p.numero_presupuesto }}</td>
+                        <td>
+                            {% if p.pedido %}
+                                <a href="{{ url_for('compras.ver_pedido', id=p.pedido.id) }}" class="text-decoration-none">
+                                    {{ p.pedido.numero_pedido }}
+                                </a>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
                         <td>{{ p.fecha_recepcion.strftime('%d/%m/%Y') }}</td>
                         <td>{{ p.proveedor.razon_social }}</td>
                         <td>Gs. {{ "{:,.0f}".format(p.total|float) }}</td>
@@ -50,7 +60,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="6" class="text-center">No hay presupuestos registrados.</td>
+                        <td colspan="7" class="text-center">No hay presupuestos registrados.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
